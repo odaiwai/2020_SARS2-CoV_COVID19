@@ -1,3 +1,5 @@
 *~
 historic/
 
+*.out
+*.sqlite
