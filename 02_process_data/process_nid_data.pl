@@ -19,6 +19,7 @@ use lib "/home/odaiwai/src/dob_DBHelper";
 use DBHelper;
 
 my $verbose = 1;
+my $dbverb = 0;
 my $firstrun = 1;
 my $datadir = "../01_download_data";
 my @files = `ls $datadir`;
@@ -34,13 +35,13 @@ print "$coldefs\n";
 
 if ( $firstrun) {
 	#Make Tables
-	my $result = drop_all_tables($db, "", $verbose);
+	my $result = drop_all_tables($db, "", $dbverb);
 
 	my %tables = (
 		"diseases" => "name Text UNIQUE Primary Key",
 		"months"   => "Timestamp Integer UNIQUE PRIMARY KEY, Year Integer, Month Text",
 	);
-	my $tables = make_db($db, \%tables, $verbose);
+	my $tables = make_db($db, \%tables, $dbverb);
 	print "$tables tables initialised.\n";
 }
 
@@ -51,7 +52,7 @@ for my $file (@files) {
 
 	if ($file =~ /nid([0-9]+)en\.csv$/) {
 		my $year = $1;
-		dbdo($db, "BEGIN", $verbose);
+		dbdo($db, "BEGIN", $dbverb);
 
 		open (my $fh, "<", "$datadir/$file") or die "Can't open $datadir/$file. $!";
 		while (my $line =<$fh>) {
@@ -67,18 +68,18 @@ for my $file (@files) {
 				$diseases{$disease}++;
 				print "Disease: $disease ($diseases{$disease})...\n" if $verbose;
 				if ( $diseases{$disease} == 1 ) {
-					my $result = dbdo($db, "CREATE TABLE [$disease] ($coldefs);", $verbose);
-					dbdo($db, "INSERT into [Diseases] (Name) Values (\"$disease\");", $verbose);
+					my $result = dbdo($db, "CREATE TABLE [$disease] ($coldefs);", $dbverb);
+					dbdo($db, "INSERT into [Diseases] (Name) Values (\"$disease\");", $dbverb);
 				}
 				my $values = "$year, " . join(", ", map{ "\"$_\""} @components);
 				my $result = dbdo($db, 
 					"INSERT OR IGNORE INTO [$disease] ($columns) Values ($values);", 
-					$verbose);
+					$dbverb);
 			}
 
 		}
 		close $fh;
-		dbdo($db, "COMMIT", $verbose);
+		dbdo($db, "COMMIT", $dbverb);
 	}
 }
 sub sanitised_line {
