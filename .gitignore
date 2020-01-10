@@ -3,3 +3,4 @@ historic/
 
 *.out
 *.sqlite
+*.swp
