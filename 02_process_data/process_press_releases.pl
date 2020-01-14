@@ -1,9 +1,9 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: process_nid_data.pl
-#        USAGE: ./process_nid_data.pl  
-#  DESCRIPTION: Script to  parse the historic Press Releases and build a 
+#        USAGE: ./process_nid_data.pl
+#  DESCRIPTION: Script to  parse the historic Press Releases and build a
 #  Database
 #       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
 #      CREATED: 01/06/2020 01:52:27 PM
@@ -13,6 +13,7 @@ use warnings;
 use utf8;
 use DBI;
 use Data::Dumper;
+use HTML::Entities;
 
 ## my DBHelper
 use lib "/home/odaiwai/src/dob_DBHelper";
@@ -52,94 +53,120 @@ if ( $firstrun) {
 
 #print "Processing @files...\n" if $verbose;
 
-dbdo($db, "BEGIN", $dbverb);
+dbdo($db, 'BEGIN', $dbverb);
 for my $file (@files) {
 	chomp $file;
-	#print "Processing file: $file...\n";
+	print "\n\nProcessing file: $file...\n";
+	my ($timestamp, $date, $pr_num, $table, $new_cases, $total, $discharged) = process_file($file);
+	if (defined($table)) {
+		print "$file: $timestamp, $date, $pr_num, $table, $new_cases, $total, $discharged\n" if $verbose;
+		my $result = dbdo($db, "INSERT INTO [$table] (Timestamp, Date, PR_num, new_cases, total, discharged) Values ($timestamp, $date, $pr_num, $new_cases, $total, $discharged);", $dbverb);
+	}
+	print "finished $file...\n\n";
+	#sleep 2;}
+}
 
-	if ($file =~ /P([0-9]{8})([0-9]+)\.htm/) {
+dbdo($db, "COMMIT", $dbverb);
+$db.close();
+
+## SUBS
+sub process_file {
+	my $file = shift;
+	if ($file =~ /P(\d{8})(\d+)\.htm/) {
 		my $date = $1;
 		my $pr_num = $2;
 		my $timestamp = "$1$2";
 		my $table;
 		my $fields = "Timestamp, Date, pr_num, new_cases, stable, discharged";
 		my ($new_cases, $total, $discharged) = (0, 0, 0);
+		print "\tPF: $date:$pr_num\n" if $verbose;
 
-		open (my $fh, "-|", "lynx -dump $datadir/$file") or die "Can't open $datadir/$file. $!";
-		my $last_line = <$fh>;
-		chomp $last_line;
-		while (my $this_line =<$fh>) {
-			chomp $this_line;
-			my $line = $last_line . $this_line;
-			$line = sanitised_line($line);
-			#print "$line\n" if $verbose;
+		my @pr_body = `grep  \"^&nbsp;\" $datadir/$file`;
+		my @pr_all = `lynx -dump $datadir/$file`;
 
-			# Figure out what sort of press release this is
-			if ( $line =~ /Public hospital daily update on Wuhan-related cases/ ) {
-				$table = "HongKong";
-				#print "\t$table\n";
-			} 
-			if ( $line =~ /Public hospitals heighten vigilance/ ) {
-				$table = "Wuhan";
-			} 
-			if ( $line =~ /CHP closely monitors cluster/ ) {
-				$table = "Wuhan";
-			} 
-			if ( $line =~ /ha[dev]+ admitted (.*) patients/ ) {
-				$new_cases = digits_from_words($1);
-			}
-			if ( $line =~ /reported (.*?) (concerned )*patient cases/ ) {
-				$total = digits_from_words($1);
-			}
-			if ( $line =~ /identified (.*?) cases/ ) {
-				$total = digits_from_words($1);
-			}
-			if ( $line =~ /(.*?) concerned patient cases/ ) {
-				$total = digits_from_words($1);
-			}
-			if ( $line =~ /December 31, 2019. (.*)/ ) {
-				my $new_num = digits_from_words($1);
-				if ( $discharged = 0 && $new_num > 0) {
-					$discharged = $new_num;
+		for my $para (@pr_body) {
+			chomp $para;
+			print "\t\tPARA:$para\n" if $verbose;
+			$para = sanitise_text($para);
+			print "\t\tPARA:$para\n" if $verbose;
+			my @lines = split('\.', $para);
+			for my $line (@lines){
+				print "\t\tLINE:$line\n" if $verbose;
+
+				# Figure out what sort of press release this is
+				if ( $line =~ /[Hh]ospital[s]* ha[dve]+ admitted.*Wuhan.*/ ) {
+					$table = "HongKong";
+					#print  $text\n" if $verbose;
+					#print "\t$table\n";
+				}
+				if ( $line =~ /Wuhan Municipal Health Commission/ ) {
+					$table = "Wuhan";
+				}
+				if ( $line =~ /ha[dve]+ admitted (.*?) patient/ ) {
+					$new_cases = max($new_cases, digits_from_words($1));
+					print  "$line\n" if $verbose;
+				}
+				if ( $line =~ /reported (.*?) (concerned )*patient cases/ ) {
+					$total = max($total, digits_from_words($1));
+				}
+				if ( $line =~ /, (.*) cases have been reported./) {
+					$total = max($total, digits_from_words($1));
+				}
+				if ( $line =~ /identified (.*?) cases/ ) {
+					$total = max($total, digits_from_words($1));
+				}
+				if ( $line =~ /(.*?) concerned patient cases/ ) {
+					$total = max($total, digits_from_words($1));
+				}
+				if ( $line =~ /,(.*) have been discharged./ ) {
+					$discharged = max($discharged, digits_from_words($1));
+				}
+				if (defined($table)) {
+					print "\t$file: $timestamp, $date, $pr_num, $table, $new_cases, $total, $discharged\n" if $verbose;
 				}
 			}
-			if ( $line =~ /([A-Za-z-]) of them have been discharged./ ) {
-				my $new_num = digits_from_words($1);
-				if ( $discharged = 0 && $new_num > 0) {
-					$discharged = $new_num;
-				}
-			}
-
-			$last_line = $this_line;
 		}
-		close $fh;
-		if (defined($table)) {
-			print "$file: $timestamp, $date, $pr_num, $table, $new_cases, $total, $discharged\n" if $verbose;
-			my $result = dbdo($db, "INSERT INTO [$table] (Timestamp, Date, PR_num, new_cases, total, discharged) Values ($timestamp, $date, $pr_num, $new_cases, $total, $discharged);", $dbverb);
-		}
+		return ($timestamp, $date, $pr_num, $table, $new_cases, $total, $discharged);
+	} else {
+		print "Input Arguments not recognised!\n";
 	}
 }
-dbdo($db, "COMMIT", $dbverb);
-$db.close();
 
+sub max {
+	my $local_max = shift;
+	while (my $next = shift) {
+		if ($next > $local_max ) {
+			$local_max = $next;
+		}
+	}
+	return $local_max;
+}
 
-## SUBS
-sub sanitised_line {
-	my $line = shift;
-	# check if the line contains quoted disease name
-	#print "Sanitising: $line\n" if $verbose;
-	$line =~ s/\r//g;
+sub sanitise_text {
+	my $text = shift;
+	# check if th $text contains quoted disease name
+	#print "Sanitising: $text\n" if $verbose;
 
-	# Leading, trailing and multiple spaces
-	$line =~ s/\s+/ /g;
-	$line =~ s/\s+$//g;
-	$line =~ s/^s+//g;
+	# These need to be done in a particular order
+	# Handle HTML entities
+	$text =~ s/\&nbsp;/ /g; # decode_entities $text);
+	$text =~ s/\&#39;/'/g; # decode_entities $text);
+	$text =~ s/\<[\/a-z]+.*?\>//g; # HTML Tags
+
+	# # Leading, trailing and multiple spaces
+ 	$text =~ s/\s+$//g;
+ 	$text =~ s/^s+//g;
+ 	$text =~ s/\s+/ /g;
+
+	# # Remove confusing time references
+ 	$text =~ s/ 24 hours//g;
+ 	$text =~ s/ 14 days//g;
+
+	# #print "Sanitising: $text\n";
+	# #Trailing commas
+ 	$text =~ s/,+$//g;
 	
-	#print "Sanitising: $line\n";	
-	#Trailing commas
-	$line =~ s/,+$//g;
-	return $line;
-
+	return $text;
 }
 
 sub digits_from_words {
@@ -169,4 +196,3 @@ sub digits_from_words {
 	print "\tDFW:$words -> $digits\n" if $verbose;
 	return $digits;
 }
-	
