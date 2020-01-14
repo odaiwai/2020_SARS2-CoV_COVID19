@@ -14,12 +14,25 @@ use utf8;
 # https://www.info.gov.hk/gia/general/202001/02.htm
 my $verbose = 0;
 my $datadir = "01_download_data";
+my $no_clobber = "-nc";
 my $baseurl = "https://www.info.gov.hk/gia/general/";
 my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics";
 my @yearmonth_days;
 while (my $arg = shift) {
 	if ( $arg =~ /([0-9]{6})([0-9]{2})/ ) {
 		push @yearmonth_days, "$1/$2";
+	}
+	if ( $arg =~ /all/ ) {
+		$no_clobber = "";
+		my $year = 2020;
+		for my $month (1..12) {
+			for my $day (1..31) {
+				my $yearmonth_day = sprintf("%04d", $year) . sprintf("%02d", $month) ."/". sprintf("%02d", $day);
+				print "Adding $yearmonth_day\n" if $verbose;
+				push @yearmonth_days, $yearmonth_day;
+			}
+		}
+
 	}
 }
 # Always do today
@@ -47,7 +60,7 @@ for my $yearmonth_day (@yearmonth_days) {
 			my $link_url = $2;
 			if ( exists($links{$link_num}) ) {
 				print "Downloading $link_num \"$links{$link_num}\" from $link_url\n";
-				my $result = `cd $datadir; wget -nc $link_url`; 
+				my $result = `cd $datadir; wget $no_clobber $link_url`; 
 			}
 		}
 	}

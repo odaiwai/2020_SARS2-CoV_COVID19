@@ -4,3 +4,5 @@ historic/
 *.out
 *.sqlite
 *.swp
+
+01_download_data/

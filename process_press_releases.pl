@@ -22,7 +22,7 @@ use DBHelper;
 my $verbose = 1;
 my $dbverb  = 1;
 my $firstrun = 1;
-my $datadir = "../01_download_data";
+my $datadir = "./01_download_data";
 my @files = `ls $datadir/P*.htm`;
 my $db = dbconnect("press_releases.sqlite", "", "") or die $DBI::errstr;
 my @months = qw/Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec Total/;
@@ -72,7 +72,7 @@ $db.close();
 ## SUBS
 sub process_file {
 	my $file = shift;
-	if ($file =~ /P(\d{8})(\d+)\.htm/) {
+	if ($file =~ /P(\d{8})(\d+)\.htm/sxm) {
 		my $date = $1;
 		my $pr_num = $2;
 		my $timestamp = "$1$2";
@@ -81,8 +81,8 @@ sub process_file {
 		my ($new_cases, $total, $discharged) = (0, 0, 0);
 		print "\tPF: $date:$pr_num\n" if $verbose;
 
-		my @pr_body = `grep  \"^&nbsp;\" $datadir/$file`;
-		my @pr_all = `lynx -dump $datadir/$file`;
+		my @pr_body = `grep  \"^&nbsp;\" $file`;
+		my @pr_all = `lynx -dump $file`;
 
 		for my $para (@pr_body) {
 			chomp $para;
@@ -94,31 +94,31 @@ sub process_file {
 				print "\t\tLINE:$line\n" if $verbose;
 
 				# Figure out what sort of press release this is
-				if ( $line =~ /[Hh]ospital[s]* ha[dve]+ admitted.*Wuhan.*/ ) {
+				if ( $line =~ /[Hh]ospital[s]* ha[dve]+ admitted.*Wuhan.*/sxm ) {
 					$table = "HongKong";
 					#print  $text\n" if $verbose;
 					#print "\t$table\n";
 				}
-				if ( $line =~ /Wuhan Municipal Health Commission/ ) {
+				if ( $line =~ /Wuhan Municipal Health Commission/sxm ) {
 					$table = "Wuhan";
 				}
-				if ( $line =~ /ha[dve]+ admitted (.*?) patient/ ) {
+				if ( $line =~ /ha[dve]+ admitted (.*?) patient/sxm ) {
 					$new_cases = max($new_cases, digits_from_words($1));
 					print  "$line\n" if $verbose;
 				}
-				if ( $line =~ /reported (.*?) (concerned )*patient cases/ ) {
+				if ( $line =~ /reported (.*?) (concerned )*patient cases/sxm ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /, (.*) cases have been reported./) {
+				if ( $line =~ /, (.*) cases have been reported./sxm) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /identified (.*?) cases/ ) {
+				if ( $line =~ /identified (.*?) cases/sxm ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /(.*?) concerned patient cases/ ) {
+				if ( $line =~ /(.*?) concerned patient cases/sxm ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /,(.*) have been discharged./ ) {
+				if ( $line =~ /,(.*) have been discharged./sxm ) {
 					$discharged = max($discharged, digits_from_words($1));
 				}
 				if (defined($table)) {
@@ -149,22 +149,22 @@ sub sanitise_text {
 
 	# These need to be done in a particular order
 	# Handle HTML entities
-	$text =~ s/\&nbsp;/ /g; # decode_entities $text);
-	$text =~ s/\&#39;/'/g; # decode_entities $text);
-	$text =~ s/\<[\/a-z]+.*?\>//g; # HTML Tags
+	$text =~ s/\&nbsp;/ /gsxm; # decode_entities $text);
+	$text =~ s/\&#39;/'/gsxm; # decode_entities $text);
+	$text =~ s/\<[\/a-z]+.*?\>//gsxm; # HTML Tags
 
 	# # Leading, trailing and multiple spaces
- 	$text =~ s/\s+$//g;
- 	$text =~ s/^s+//g;
- 	$text =~ s/\s+/ /g;
+ 	$text =~ s/\s+$//gsxm;
+ 	$text =~ s/^s+//gsxm;
+ 	$text =~ s/\s+/ /gsxm;
 
 	# # Remove confusing time references
- 	$text =~ s/ 24 hours//g;
- 	$text =~ s/ 14 days//g;
+ 	$text =~ s/ 24 hours//gsxm;
+ 	$text =~ s/ 14 days//gsxm;
 
 	# #print "Sanitising: $text\n";
 	# #Trailing commas
- 	$text =~ s/,+$//g;
+ 	$text =~ s/,+$//gsxm;
 	
 	return $text;
 }
