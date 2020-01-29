@@ -14,6 +14,7 @@ use utf8;
 use DBI;
 use Data::Dumper;
 use HTML::Entities;
+use Term::ReadKey;
 
 ## my DBHelper
 use lib "/home/odaiwai/src/dob_DBHelper";
@@ -63,13 +64,33 @@ for my $file (@files) {
 		my $result = dbdo($db, "INSERT INTO [$table] (Timestamp, Date, PR_num, new_cases, total, discharged) Values ($timestamp, $date, $pr_num, $new_cases, $total, $discharged);", $dbverb);
 	}
 	print "finished $file...\n\n";
-	#sleep 2;}
+
+	my $result = wait_for_keypress(2);
+
 }
 
 dbdo($db, "COMMIT", $dbverb);
 $db.close();
 
-## SUBS
+#
+sub wait_for_keypress {
+	my $interval = shift;
+	ReadMode 3;
+	while ($interval > 0 ) {
+		print "Press a key to continue or wait for $interval seconds.\r";
+		my $key = ReadKey(-1);
+		if (defined $key) {
+			print "\n$key Pressed\n";
+			$interval = 0;
+		} else {
+			sleep(1);
+			$interval-- ;
+		}
+	}
+	ReadMode 0;
+	return $interval;
+}
+
 sub process_file {
 	my $file = shift;
 	if ($file =~ /P(\d{8})(\d+)\.htm/sxm) {
@@ -86,39 +107,39 @@ sub process_file {
 
 		for my $para (@pr_body) {
 			chomp $para;
-			print "\t\tPARA:$para\n" if $verbose;
+			#print "\t\tPARA:$para\n" if $verbose;
 			$para = sanitise_text($para);
-			print "\t\tPARA:$para\n" if $verbose;
+			print "\tPARA:$para\n" if $verbose;
 			my @lines = split('\.', $para);
 			for my $line (@lines){
 				print "\t\tLINE:$line\n" if $verbose;
 
 				# Figure out what sort of press release this is
-				if ( $line =~ /[Hh]ospital[s]* ha[dve]+ admitted.*Wuhan.*/sxm ) {
+				if ( $line =~ /[Hh]ospital[s]* ha[dve]+ admitted.*Wuhan.*/s ) {
 					$table = "HongKong";
 					#print  $text\n" if $verbose;
 					#print "\t$table\n";
 				}
-				if ( $line =~ /Wuhan Municipal Health Commission/sxm ) {
+				if ( $line =~ /Wuhan Municipal Health Commission/s ) {
 					$table = "Wuhan";
 				}
-				if ( $line =~ /ha[dve]+ admitted (.*?) patient/sxm ) {
+				if ( $line =~ /ha[dve]+ admitted (.*?) patient/s ) {
 					$new_cases = max($new_cases, digits_from_words($1));
 					print  "$line\n" if $verbose;
 				}
-				if ( $line =~ /reported (.*?) (concerned )*patient cases/sxm ) {
+				if ( $line =~ /reported (.*?) (concerned )*patient cases/s ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /, (.*) cases have been reported./sxm) {
+				if ( $line =~ /, (.*) cases have been reported./s) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /identified (.*?) cases/sxm ) {
+				if ( $line =~ /identified (.*?) cases/s ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /(.*?) concerned patient cases/sxm ) {
+				if ( $line =~ /(.*?) concerned patient cases/s ) {
 					$total = max($total, digits_from_words($1));
 				}
-				if ( $line =~ /,(.*) have been discharged./sxm ) {
+				if ( $line =~ /(.*) have been discharged/s ) {
 					$discharged = max($discharged, digits_from_words($1));
 				}
 				if (defined($table)) {
@@ -165,7 +186,7 @@ sub sanitise_text {
 	# #print "Sanitising: $text\n";
 	# #Trailing commas
  	$text =~ s/,+$//gsxm;
-	
+
 	return $text;
 }
 
