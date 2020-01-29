@@ -6,3 +6,7 @@ historic/
 *.swp
 
 01_download_data/
+35_dxy_cn.*
+*.log
+*.json
+python_scripting.py
