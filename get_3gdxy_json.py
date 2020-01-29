@@ -7,34 +7,36 @@ if you get codepage errors running under Windows you'll need to update the code 
    
 https://stackoverflow.com/questions/6812031/how-to-make-unicode-string-with-python3
 
-Tested on a Mac running Mojave, and a Linux box runnng Fedora 30, works on Windows (as 
-noted above for CMD, and with no problems in a Cygwin shell.)
+Tested on a Mac running Mojave, and a Linux box running Fedora 30, works on Windows (as 
+noted above for CMD), and with no problems in a Cygwin shell.
 
-dave o'brien (c) 2020
+dave o'brien (c) 2020/01/29
 """
 import os, json, re, sys
 import requests
 import datetime
 
 def top_and_tail(string, width):
+    """
+    Show the start and end of a long string - helpful for debugging without clutter.
+    """
     return (string[0:width] + '...' + string[-width:])
 
 if __name__ == '__main__':
-    WIDTH = 50
+    DOWNLOADS = '01_download_data/'
     html_source = ''
     timestamp = ''
 
-    print (len(sys.argv))
     if len(sys.argv) > 1:
         # parse an existing file
-        INFILE = sys.argv[1] # r'./01_download_data/全国新型肺炎疫情实时动态 - 丁香园·丁香医生.html'
-        infh = open(INFILE, "r")
+        infh = open(sys.argv[1], "r")
         html_source = infh.read()
         infh.close()
     else:
         # Go to the URL and retrieve it
         response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
         html_source = response.content.decode()
+
 
     # try to figure out when this file was made so we can timestamp it.
     #  overall strategy is to find the latest time reference in the html
@@ -48,17 +50,20 @@ if __name__ == '__main__':
             #print (found_time, latest_timestamp)
     
     timestamp = latest_timestamp.strftime("%y%m%d_%H%M%S")
-    print (latest_timestamp, timestamp)
+    with open(DOWNLOADS + timestamp + '_3g_dxy_cn.html', "w") as outfile:
+        outfile.write(html_source)
+    #print (latest_timestamp, timestamp)
     
     #compile a regexp to match a script
     jsonareamatch   = re.compile(r'(\[\{\"provinceName\"\:.*\"cities\"\:\[\]\}\])')
-    print(jsonareamatch, type(jsonareamatch))
+    #print(jsonareamatch, type(jsonareamatch))
     for match in jsonareamatch.finditer(html_source): # list of scripts
-        print (match, type(match))
+        #print (match, type(match))
         #print (match[0])
         area_stats = json.loads(match[0])
         #print(json.dumps(area_stats, indent=4, ensure_ascii=False))
 
+        # dump a nicely formatted JSON blob
         with open('01_download_data/' + timestamp + '_getAreaStat.json', "w") as outfile:
             json.dump(area_stats, outfile, indent=4, ensure_ascii=False)
 
