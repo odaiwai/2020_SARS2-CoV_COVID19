@@ -14,16 +14,17 @@ use utf8;
 # https://www.info.gov.hk/gia/general/202001/02.htm
 my $verbose = 0;
 my $datadir = "01_download_data";
-my $no_clobber = "-nc";
+my $no_clobber = 1;
 my $baseurl = "https://www.info.gov.hk/gia/general/";
 my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics";
 my @yearmonth_days;
+
 while (my $arg = shift) {
 	if ( $arg =~ /([0-9]{6})([0-9]{2})/ ) {
 		push @yearmonth_days, "$1/$2";
 	}
 	if ( $arg =~ /all/ ) {
-		$no_clobber = "";
+		$no_clobber = 0;
 		my $year = 2020;
 		for my $month (1..12) {
 			for my $day (1..31) {
@@ -32,7 +33,9 @@ while (my $arg = shift) {
 				push @yearmonth_days, $yearmonth_day;
 			}
 		}
-
+	}
+	if ( $arg =~ /verbose/ ) {
+		$verbose = 1;
 	}
 }
 # Always do today
@@ -41,6 +44,13 @@ chomp $yearmonth;
 my $day = `date +%d`;
 chomp $day;
 push @yearmonth_days, "$yearmonth/$day";
+
+my @wget_options;
+push @wget_options, "-nc" if ($no_clobber);
+push @wget_options, "-q"  if !($verbose);
+push @wget_options, "-v"  if ($verbose);
+
+my $wget_options = join(" ", @wget_options);
 
 for my $yearmonth_day (@yearmonth_days) {
 	my $pressrelease_url = "$baseurl/$yearmonth_day.htm";
@@ -53,14 +63,14 @@ for my $yearmonth_day (@yearmonth_days) {
 			my $link_num = $1;
 			my $link_title = $2;
 			$links{$link_num} = $link_title;
-			print "found link: $link_num: $link_title\n";
+			print "found link: $link_num: $link_title\n" if $verbose;
 		}
 		if ( $line =~ /^\s+([0-9]+)\.\s+(http.*)$/ ) {
 			my $link_num = $1;
 			my $link_url = $2;
 			if ( exists($links{$link_num}) ) {
-				print "Downloading $link_num \"$links{$link_num}\" from $link_url\n";
-				my $result = `cd $datadir; wget $no_clobber $link_url`; 
+				print "Downloading $link_num \"$links{$link_num}\" from $link_url\n" if $verbose;
+				my $result = `cd $datadir; wget $wget_options $link_url`; 
 			}
 		}
 	}
