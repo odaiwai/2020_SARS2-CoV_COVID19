@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 split the HTML from 3G_DGY.CN into JSON Blobs and Decode them
+into a CSV file
 
-dave o'brien
+dave o'brien (c) 2020
 """
-import os, json, re
+import os, json, re, sys
+
 
 def top_and_tail(string, width):
     return (string[0:width] + '...' + string[-width:])
@@ -12,40 +14,55 @@ def top_and_tail(string, width):
 if __name__ == '__main__':
     WIDTH = 50
 
-    INFILE = r'./01_download_data/全国新型肺炎疫情实时动态 - 丁香园·丁香医生.html'
+    INFILE = sys.argv[1] # r'./01_download_data/全国新型肺炎疫情实时动态 - 丁香园·丁香医生.html'
     infh = open(INFILE, "r")
     html_source = infh.read()
-    print(top_and_tail(html_source, 100))
     infh.close()
 
-    #File is one packed line, but we only want the JSON in the <script></script> blocks
+    print(top_and_tail, html_source, 100)
+
     #compile a regexp to match a script
-    scriptmatch = re.compile(r'script.*>(.*?)</script')       # Script in the header
-    jsonmatch   = re.compile(r'try \{ (.*) = \{.*\})\}catch')   # Java Script to load the JSON
-    jlistmatch   = re.compile(r'try \{ (.*) = \[(\{.*\})\]\}catch')   # Java Script to load the JSON
-    idblock   = re.compile(r'(,\{"id":.*\})$')          # Split the JSONs from the end of the line
+    jsonareamatch   = re.compile(r'(\[\{\"provinceName\"\:.*\"cities\"\:\[\]\}\])')
 
-    print(scriptmatch, type(scriptmatch))
-    print(jsonmatch, type(jsonmatch))
-    print(jlistmatch, type(jlistmatch))
+    print(jsonareamatch, type(jsonareamatch))
 
-    scripts = scriptmatch.findall(html_source ) # list of scripts
-    print (len(scripts))
+    for match in jsonareamatch.finditer(html_source ): # list of scripts
+        print (match, type(match))
+        #print (match[0])
+        area_stats = json.loads(match[0])
+        #print(json.dumps(area_stats, indent=4, ensure_ascii=False))
 
-    for script in scripts:
-        print('\tSCR:', len(script), top_and_tail(script, WIDTH))
-        matches = jsonmatch.findall(html_source)
-        for match in matches:
-            #print('\tJSON: ', match[0], '=', top_and_tail(match[1], WIDTH))
-            #name = match[0]
-            #print(match[1]) # This can be more than one JSON Blob
-            #data = json.loads(match[1])
-            #with open(name + '.json', "w") as outfile:
-                #json.dump(data, outfile)
+        with open('getAreaStat.json', "w") as outfile:
+            json.dump(area_stats, outfile, indent=4, ensure_ascii=False)
 
-            #print(json.dumps(data, indent=4))
+        # Walk the tree...
+        header = "Province, City, Confirmed, Suspected, Cured, Dead, comment"
+        outfh = open('3g_dxy_cn.csv', "w")
+        print (header)
+        outfh.write(header + '\n')
+        for province in area_stats:
+            case_count = '"{}", "{}", {}, {}, {}, {}, "{}"'.format(
+                province["provinceName"],
+                '(total)',
+                province["confirmedCount"],
+                province["suspectedCount"],
+                province["curedCount"],
+                province["deadCount"],
+                province["comment"])
+            print(case_count)
+            outfh.write(case_count + '\n')
 
+            for city in province["cities"]:
+                #print('\tCity', type(city), city)
+                case_count = '"{}", "{}", {}, {}, {}, {}'.format(
+                    province["provinceName"],
+                    city["cityName"],
+                    city["confirmedCount"],
+                    city["suspectedCount"],
+                    city["curedCount"],
+                    city["deadCount"])
+                print(case_count)
+                outfh.write(case_count + '\n')
 
-
-
+        outfh.close()
 
