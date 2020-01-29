@@ -39,7 +39,8 @@ if __name__ == '__main__':
 
 
     # try to figure out when this file was made so we can timestamp it.
-    #  overall strategy is to find the latest time reference in the html
+    # The overall strategy is to find the latest time reference in the html
+    # ASSUMPTION: time only moves in a forward direction.
     timestamp_match = re.compile(r'Time\"\:([0-9]+)\,')
     latest_timestamp = datetime.datetime.fromtimestamp(0)
     for match in timestamp_match.finditer(html_source):
