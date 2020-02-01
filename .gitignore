@@ -10,3 +10,7 @@ historic/
 *.log
 *.json
 python_scripting.py
+.DS_Store
+gis
+plots
+urls.dat
