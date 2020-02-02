@@ -142,7 +142,9 @@ if __name__ == '__main__':
     dbc = db_connect.cursor()
     FIRSTRUN = 0
 
-    if FIRSTRUN:
+    # Check if the table disease_by_month exists
+    check = array_from_query('select name from sqlite_master where name like \'disease_by_month\';')
+    if (FIRSTRUN is True) or (len(check) == 0):
         make_table_of_disease_by_month()
 
     # get the Data in Pandas Dataframe
