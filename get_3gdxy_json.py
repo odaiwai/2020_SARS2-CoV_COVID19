@@ -34,7 +34,8 @@ if __name__ == '__main__':
         infh.close()
     else:
         # Go to the URL and retrieve it
-        response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
+        #response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
+        response = requests.get(r'https://ncov.dxy.cn/ncovh5/view/pneumonia')
         html_source = response.content.decode()
 
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
             latest_timestamp = found_time
             #print (found_time, latest_timestamp)
     
-    timestamp = latest_timestamp.strftime("%y%m%d_%H%M%S")
+    timestamp = latest_timestamp.strftime("%Y%m%d_%H%M%S")
     with open(DOWNLOADS + timestamp + '_3g_dxy_cn.html', "w") as outfile:
         outfile.write(html_source)
     #print (latest_timestamp, timestamp)

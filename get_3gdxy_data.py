@@ -42,7 +42,8 @@ if __name__ == '__main__':
     
     # This page is in simplified Chinese.
     #baseurl= "https://3g.dxy.cn/newh5/view/pneumonia?scene=2"
-    baseurl= "https://3g.dxy.cn/newh5/view/pneumonia"
+    #baseurl= "https://3g.dxy.cn/newh5/view/pneumonia"
+    baseurl= "https://ncov.dxy.cn/ncovh5/view/pneumonia" # new URL
     fh.write("Opening: " + baseurl)
     browser = webdriver.Firefox(options=opts)
     wait = WebDriverWait(browser, 30)
