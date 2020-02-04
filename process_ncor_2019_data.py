@@ -125,11 +125,16 @@ def read_3g_dxy_cn_json():
     Read in the JSON data from 3G.DXY.CN and add it to the database.
     we're mainly interested in provincial growth.
     """
+    files = os.listfiles(DATADIR)
+    json = re.compile(r'^([0-9]{8}[0-9]{6})$')
+    for filename in files:
+
+
 
 
     return 1
 
-if __name__ == '__main__':
+def main():
     # main body
     """
     Go through the download dir and collect all of the various data sources:
@@ -140,7 +145,10 @@ if __name__ == '__main__':
     if (FIRSTRUN):
         make_tables()
         read_hksarg_pr()
-        read_3G_day_cn_json()
+        read_3g_dxy_cn_json()
 
+if __name__ == '__main__':
+
+    main()
     #tidy up and shut down
     dbc.close()
