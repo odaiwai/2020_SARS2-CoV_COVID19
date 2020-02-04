@@ -36,9 +36,9 @@ if __name__ == '__main__':
  
     # Get the time and open the outfile
     timestamp = datetime.datetime.now() 
-    outfile = "01_download_data/3g_dxy_cn_" + timestamp.strftime("%y%m%d_%H%M%S") + ".txt"
+    outfile = "01_download_data/3g_dxy_cn_" + timestamp.strftime("%Y%m%d_%H%M%S") + ".txt"
     fh = open(outfile, "w")
-    fh.write(timestamp.strftime("%y-%m-%d %h:%m:%s"))
+    fh.write(timestamp.strftime("%Y-%m-%d %h:%m:%s"))
     
     # This page is in simplified Chinese.
     #baseurl= "https://3g.dxy.cn/newh5/view/pneumonia?scene=2"
