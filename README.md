@@ -16,7 +16,7 @@ This webpage seems to be aggregating content from Weibo.
 The WHO is usually behind the times. Trailing indicator.
 - get_disease_outbreak_news.pl - Retrieve the relevant WHO
 
-## Hong Kong Governemtn Information Office Press Releases
+## Hong Kong Government Information Office Press Releases
  - get_press_releases.pl - Get the HK Government Press Releases that might be
  - process_press_releases.pl - Attempt to estimate relevant data from the GIS
    PR feed
