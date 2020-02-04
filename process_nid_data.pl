@@ -41,6 +41,7 @@ my $coldefs = "Year INTEGER UNIQUE PRIMARY KEY, ".join( ", ", map { $_ ." Intege
 my %diseases;
 my %disease_names;
 my %disease_refs;
+my %disease_fam;
 
 print "@months\n";
 print "$columns\n";
@@ -51,7 +52,7 @@ if ( $firstrun) {
 	my $result = drop_all_tables($db, "", $dbverb);
 
 	my %tables = (
-		"diseases" => "ref Text, name Text UNIQUE Primary Key",
+		"diseases" => "ref Text, Family Text, name Text UNIQUE Primary Key",
 		"months"   => "Timestamp Integer UNIQUE PRIMARY KEY, Year Integer, Month Text",
 	);
 	my $tables = make_db($db, \%tables, $dbverb);
@@ -60,10 +61,11 @@ if ( $firstrun) {
 	while (my $line = <$fh>) {
 		chomp $line;
 		$line =~ s/\"//g;
-		my ($short_name, $long_name) = split(",", $line);
+		my ($group, $short_name, $long_name) = split(",", $line);
 		$disease_names{$short_name} = $long_name;
+		$disease_fam{$short_name} = $group;
 		$disease_refs{$long_name} = $short_name;
-		print "$long_name, $short_name\n" if $verbose;
+		print "$long_name, $short_name, $group\n" if $verbose;
 	}
 	close $fh;
 }
@@ -96,7 +98,7 @@ for my $file (@files) {
 				print "Disease: $disease ($diseases{$disease} - $disease_ref )...\n" if $verbose;
 				if ( $diseases{$disease} == 1 ) {
 					my $result = dbdo($db, "CREATE TABLE if not exists [$disease_ref] ($coldefs);", $dbverb);
-					dbdo($db, "INSERT OR IGNORE into [Diseases] (Ref, Name) Values (\"$disease_ref\", \"$disease\");", $dbverb);
+					dbdo($db, "INSERT OR IGNORE into [Diseases] (Ref, Family, Name) Values (\"$disease_ref\", \"$disease_fam{$disease_ref}\", \"$disease\");", $dbverb);
 				}
 				my $values = "$year, " . join(", ", map{ "\"$_\""} @components);
 				my $result = dbdo($db, "INSERT OR IGNORE INTO [$disease_ref] ($columns) Values ($values);", $dbverb);
