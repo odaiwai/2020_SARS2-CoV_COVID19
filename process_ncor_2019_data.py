@@ -12,79 +12,22 @@ import sqlite3
 import json
 #import openpyxl
 import datetime
-
-def dbdo(cmd):
-    """
-    Execute a databse command, optionally printing the cmd if verbose
-    """
-    if VERBOSE:
-        print(cmd)
-
-    result = dbc.execute(cmd)
-    return result
-
-def array_from_query(query_str):
-     """
-     Return an array from the database.
-     only uses the first column returned by the query.
-     """
-     results = []
-     for row in dbc.execute(query_str):
-         results.append(row[0])
-
-     return results
-
-def value_from_query(query_str):
-    """
-    Return a single value from a query.
-    """
-    print (query_str)
-    results = array_from_query(query_str)
-    if len(results) == 0:
-        return 'Null'
-    else:
-        return results[0]
-
-def dict_from_query(query_str):
-     """
-     Return a query as a dict of two elements:
-     e.g. select name, rank from staff
-     staff['Fred'] = 'Boss'
-     Only uses the first two columns of the query.
-     """
-     results = {}
-     for row in dbc.execute(query_str):
-         results[row[0]] = row[1]
-
-     return results
-
-def rows_from_query(query_str):
-     """
-     Return a list of lists from a database query.
-     each list contains a list of all the rows.
-     """
-     results = []
-     for row in dbc.execute(query_str):
-         results.append(row)
-
-     return results
+from db_helper import *
+import matplotlib.pyplot as plt
+#import pandas as pd
+#import numpy as np
 
 def make_tables():
     # Make the Database tables
-    print ('Dropping Tables')
-    for table in array_from_query('select name from sqlite_master where type like \'table\';'):
-        result = dbc.execute('DROP TABLE IF EXISTS [{}]'.format(table))
-
     tabledefs = {
         'hksarg_pr': 'timestamp text Unique Primary Key, New Int, Total Int, Cured Int, Remain Int, Stable Int, Serious Int, Critical Int, Confirmed Int, Dead Int',
-        '3g_dxy_cn_province': 'UUID text unique Primary Key, Timestamp Int, Province_ZH Text, Province_EN Text, Confirmed Int, Suspected Int, Dead Int, Cured Int, Comment Text',
-        '3g_dxy_cn_city': 'UUID text unique Primary Key, Timestamp Int, Province_ZH Text, Province_EN Text, City_ZH Text, City_EN, Confirmed Int, Suspected Int, Dead Int, Cured Int',
+        '3g_dxy_cn_province': 'UUID text unique Primary Key, Timestamp Int, ISO_Date Text, Province_ZH Text, Province_EN Text, Confirmed Int, Suspected Int, Dead Int, Cured Int, Comment Text',
+        '3g_dxy_cn_city': 'UUID text unique Primary Key, Timestamp Int, ISO_Date Text, Province_ZH Text, Province_EN Text, City_ZH Text, City_EN, Confirmed Int, Suspected Int, Dead Int, Cured Int',
         'jhu': 'UUID text unique Primary Key, Timestamp Int, Country Text, Province Text, Confirmed Int, Dead Int, Cured Int',
         'china_places': 'OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, ADM0_PCODE Text'
             }
-    print ('Building Tables...')
-    for table in tabledefs.keys():
-        result = dbc.execute('CREATE TABLE [{}] ({});'.format(table, tabledefs[table]))
+
+    make_tables_from_dict(dbc, tabledefs)
 
 def escaped_list(list):
     """
@@ -122,7 +65,7 @@ def read_hksarg_pr():
     with open(filename, 'r') as infh:
         lines = list(infh)
 
-    dbdo('BEGIN')
+    dbdo(dbc, 'BEGIN', VERBOSE)
     for line in lines:
         values = tab.split(line)
         date_str = values.pop(0)
@@ -136,10 +79,9 @@ def read_hksarg_pr():
                                  int(date_list[4]))
         
         sqlcmd = 'INSERT OR IGNORE INTO [hksarg_pr] (Timestamp, New, Total, Cured, Remain, Stable, Serious, Critical, Confirmed, Dead) Values (\"{}\", {});'.format(date, escaped)
-        dbc.execute(sqlcmd)
-        print(sqlcmd)
+        dbdo(dbc, sqlcmd, VERBOSE)
     
-    dbdo('COMMIT')
+    dbdo(dbc, 'COMMIT', VERBOSE)
     return 1 
 
 def read_china_places():
@@ -150,7 +92,7 @@ def read_china_places():
         lines = list(infh)
 
     fields =  'OBJECTID, ADMIN_TYPE, ADM2_CAP, ADM2_EN, ADM2_ZH, ADM2_PCODE, ADM1_EN, ADM1_ZH, ADM1_PCODE, ADM0_EN, ADM0_ZH, ADM0_PCODE'
-    dbdo('BEGIN')
+    dbdo(dbc, 'BEGIN', VERBOSE)
     for line in lines:
         components = line.rstrip('\n').split(';')
         print (components)
@@ -158,9 +100,9 @@ def read_china_places():
         for component in components:
             values += r', "{}"'.format(component)
 
-        dbdo('INSERT into [china_places] ({}) Values ({})'.format(fields, values))
+        dbdo(dbc, 'INSERT into [china_places] ({}) Values ({})'.format(fields, values), VERBOSE)
 
-    dbdo('COMMIT')
+    dbdo(dbc, 'COMMIT', VERBOSE)
     return 1
 
 def read_3g_dxy_cn_json():
@@ -176,21 +118,24 @@ def read_3g_dxy_cn_json():
             date = match[1]
             time = match[2]
             timestamp = '{}{}'.format(date, time)
-            print (timestamp, filename)
+            #print(int(date[0:4]), int(date[4:6]), int(date[6:]), int(time[0:2]), int(time[2:4]), int(time[4:]))
+            iso_date = datetime.datetime(int(date[0:4]), int(date[4:6]), int(date[6:]), int(time[0:2]), int(time[2:4]), int(time[4:]))
+            print (timestamp, filename, iso_date)
             with open('{}/{}'.format(DATADIR, filename), 'r') as infile:
                 areastats = json.loads(infile.read())
 
             print (len(areastats))
             # Walk the tree
-            dbdo('BEGIN')
-            pfields = 'UUID, Timestamp, Province_ZH, Province_EN, Confirmed, Suspected, Cured, Dead, Comment'
-            cfields = 'UUID, Timestamp, Province_ZH, Province_EN, City_ZH, City_EN, Confirmed, Suspected, Cured, Dead'
+            dbdo(dbc, 'BEGIN', VERBOSE)
+            pfields = 'UUID, Timestamp, ISO_Date, Province_ZH, Province_EN, Confirmed, Suspected, Cured, Dead, Comment'
+            cfields = 'UUID, Timestamp, ISO_Date, Province_ZH, Province_EN, City_ZH, City_EN, Confirmed, Suspected, Cured, Dead'
             for province in areastats:
                 uuid = '{}_{}'.format(timestamp, province['provinceName'])
-                province_en = value_from_query('select distinct(ADM1_EN) from china_places where ADM1_ZH like \'{}%\';'.format(province['provinceName']))
-                values = '"{}", {}, "{}", "{}", {}, {}, {}, {}, "{}"'.format(
+                province_en = value_from_query(dbc, 'select distinct(ADM1_EN) from china_places where ADM1_ZH like \'{}%\';'.format(province['provinceName']))
+                values = '"{}", {}, "{}", "{}", "{}", {}, {}, {}, {}, "{}"'.format(
                         uuid,
                         int(timestamp),
+                        iso_date,
                         province['provinceName'],
                         province_en,
                         province['confirmedCount'],
@@ -199,7 +144,7 @@ def read_3g_dxy_cn_json():
                         province['deadCount'],
                         province['comment'])
                 sql_cmd = 'INSERT into [3g_dxy_cn_province] ({}) Values ({})'.format(pfields, values)
-                dbdo(sql_cmd)
+                dbdo(dbc, sql_cmd, VERBOSE)
 
                 #printlog (case_count)
                 
@@ -207,10 +152,11 @@ def read_3g_dxy_cn_json():
                     uuid = '{}_{}_{}'.format(timestamp, 
                             province['provinceName'], 
                             city['cityName'])
-                    city_en = value_from_query('select distinct(ADM2_EN) from china_places where ADM2_ZH like \'{}%\';'.format(city['cityName']))
-                    values = '"{}", {}, "{}", "{}", "{}", "{}", {}, {}, {}, {}'.format(
+                    city_en = value_from_query(dbc, 'select distinct(ADM2_EN) from china_places where ADM2_ZH like \'{}%\';'.format(city['cityName']))
+                    values = '"{}", {}, "{}", "{}", "{}", "{}", "{}", {}, {}, {}, {}'.format(
                             uuid,
                             int(timestamp),
+                            iso_date,
                             province['provinceName'],
                             province_en,
                             city['cityName'],
@@ -220,11 +166,46 @@ def read_3g_dxy_cn_json():
                             city['curedCount'],
                             city['deadCount'])
                     sql_cmd = 'INSERT into [3g_dxy_cn_city] ({}) Values ({})'.format(cfields, values)
-                    dbdo(sql_cmd)
+                    dbdo(dbc, sql_cmd, VERBOSE)
 
-            dbdo('COMMIT')
+            dbdo(dbc, 'COMMIT', VERBOSE)
 
     return 1
+
+def make_plots():
+    """ 
+    Make a plot by province:
+    """
+    axis_range = [datetime.datetime(2020,1,29), datetime.datetime.now()]
+    provinces = array_from_query(dbc, 'select distinct(province_ZH) from [3g_dxy_cn_province];')
+    for province in provinces:
+        province_en = value_from_query(dbc, 'select distinct(ADM1_EN) from china_places where ADM1_ZH like \'{}%\';'.format(province))
+        confirmed = dict_from_query(dbc, 'select iso_date, confirmed from [3g_dxy_cn_province] where province_ZH like \'{}\' order by timestamp;'.format(province))
+        dead = dict_from_query(dbc, 'select iso_date, dead from [3g_dxy_cn_province] where province_ZH like \'{}\' order by timestamp;'.format(province))
+        cured = dict_from_query(dbc, 'select iso_date, cured from [3g_dxy_cn_province] where province_ZH like \'{}\' order by timestamp;'.format(province))
+
+        print(province, province_en)
+        dates = []
+        for date_str in confirmed.keys():
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            dates.append(date)
+
+        print (dates)
+        fig, ax = plt.subplots()
+        fig.suptitle('NovelCoronaVirus Cases for {}'.format(province))
+        ax.set_title('Date')
+        ax.plot(dates, confirmed.values(), label='confirmed')
+        ax.plot(dates, dead.values(), label='dead')
+        ax.plot(dates, cured.values(), label='cured')
+        ax.set(xlabel='Date', xlim = axis_range, ylabel='Reported Cases')
+        ax.legend()
+        fig.savefig('plots/{}.png'.format(province_en), format = 'png')
+
+        plt.close()
+        exit()
+
+    return 0
+
 
 def main():
     # main body
@@ -238,14 +219,13 @@ def main():
         read_china_places()
         read_3g_dxy_cn_json()
     else:
-        # update?
-        print ('updating')
+        make_plots()
 
     return 0
 
 if __name__ == '__main__':
     VERBOSE = 1
-    FIRSTRUN = 1
+    FIRSTRUN = 0
     DATADIR = '01_download_data'
     
     db_connect = sqlite3.connect('ncorv2019.sqlite')

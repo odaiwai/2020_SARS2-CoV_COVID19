@@ -8,47 +8,14 @@ import numpy as np
 import sqlite3
 import datetime
 import re
-
-def array_from_query(query_str):
-    """
-    Return an array from the database.
-    only uses the first column returned by the query.
-    """
-    results = []
-    for row in dbc.execute(query_str):
-        results.append(row[0])
-
-    return results
-def dict_from_query(query_str):
-    """
-    Return a query as a dict of two elements:
-    e.g. select name, rank from staff
-    staff['Fred'] = 'Boss'
-    Only uses the first two columns of the query.
-    """
-    results = {}
-    for row in dbc.execute(query_str):
-        results[row[0]] = row[1]
-
-    return results
-
-def rows_from_query(query_str):
-    """
-    Return a list of lists from a database query.
-    each list contains a list of all the rows.
-    """
-    results = []
-    for row in dbc.execute(query_str):
-        results.append(row)
-
-    return results
+from db_helper import *
 
 def make_table_of_disease_by_month():
     # drop the combined table and build it again
     dbc.execute('DROP TABLE IF EXISTS [disease_by_month];')
 
     # get a list of the diseases
-    diseases = array_from_query('select distinct(ref) from [diseases];')
+    diseases = array_from_query(dbc, 'select distinct(ref) from [diseases];')
     table_spec = 'Date Text UNIQUE PRIMARY KEY'
     for disease in diseases:
         table_spec += ', {} Int'.format(disease)
@@ -60,7 +27,7 @@ def make_table_of_disease_by_month():
     #print (diseases, type(diseases))
     for disease in diseases:
         print('Disease: ', disease)
-        all_cases = rows_from_query('select * from  [{}] order by year;'.format(disease))
+        all_cases = rows_from_query(dbc, 'select * from  [{}] order by year;'.format(disease))
         for year_data in all_cases:
             print (year_data)
             year = year_data[0]
@@ -143,7 +110,7 @@ if __name__ == '__main__':
     FIRSTRUN = 0
 
     # Check if the table disease_by_month exists
-    check = array_from_query('select name from sqlite_master where name like \'disease_by_month\';')
+    check = array_from_query(dbc, 'select name from sqlite_master where name like \'disease_by_month\';')
     if (FIRSTRUN is True) or (len(check) == 0):
         make_table_of_disease_by_month()
 
@@ -153,7 +120,7 @@ if __name__ == '__main__':
     #print(type(df))
 
     # get the list of dates and convert to date objects
-    date_strs = array_from_query('select Date from [disease_by_month] order by date;')
+    date_strs = array_from_query(dbc, 'select Date from [disease_by_month] order by date;')
     dates = []
     for date_str in date_strs:
         year, month, day = date_str.split('/')
@@ -165,11 +132,11 @@ if __name__ == '__main__':
     hk_pop = hk_population()
 
     axis_range = [datetime.datetime(1997,1,1), datetime.datetime(2020,1,1)]
-    diseases = array_from_query('select distinct(ref) from diseases;')
-    disease_full_names = dict_from_query('select distinct(ref), name from [diseases];')
+    diseases = array_from_query(dbc, 'select distinct(ref) from diseases;')
+    disease_full_names = dict_from_query(dbc, 'select distinct(ref), name from [diseases];')
 
     for disease in diseases:
-        cases = array_from_query('select {} from  [disease_by_month] order by date;'.format(disease))
+        cases = array_from_query(dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
         print('Plotting {}...'.format(disease))
         fig, ax = plt.subplots()
         fig.suptitle('Notifiable Infections and Diseases in HK')
@@ -193,7 +160,6 @@ if __name__ == '__main__':
 
     #plot = plt.plot(dataframe)
     #plot.show()
+
     # Tidy up and close.
     dbc.close()
-
-
