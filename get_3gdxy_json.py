@@ -15,6 +15,7 @@ dave o'brien (c) 2020/01/29
 import os, json, re, sys
 import requests
 import datetime
+import sqlite3
 
 def top_and_tail(string, width):
     """
@@ -141,7 +142,7 @@ if __name__ == '__main__':
     DATADIR = '01_download_data/'
     VERBOSE = 0
     LOGFILE = os.getcwd() + '/get_3gdxy_cn.log'
- 
-    main()
 
+    main()
+ 
 
