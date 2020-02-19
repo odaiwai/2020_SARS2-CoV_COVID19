@@ -190,7 +190,7 @@ def make_plots():
             date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
             dates.append(date)
 
-        print (dates)
+        #print (dates)
         fig, ax = plt.subplots()
         fig.suptitle('NovelCoronaVirus Cases for {}'.format(province))
         ax.set_title('Date')

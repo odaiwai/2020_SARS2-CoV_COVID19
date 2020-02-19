@@ -94,6 +94,7 @@ def main():
     # ASSUMPTION: time only moves in a forward direction.
     timestamp_match = re.compile(r'Time\"\:([0-9]+)\,')
     latest_timestamp = datetime.datetime.fromtimestamp(0)
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     for match in timestamp_match.finditer(html_source):
         #printlog (match, type(match), match[1], type(match[1]))
         found_time = datetime.datetime.fromtimestamp(int(float(match[1])/1000))
