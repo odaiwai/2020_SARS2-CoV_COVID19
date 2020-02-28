@@ -16,7 +16,7 @@ my $verbose = 0;
 my $datadir = "01_download_data";
 my $no_clobber = 1;
 my $baseurl = "https://www.info.gov.hk/gia/general/";
-my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics";
+my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics|COVID";
 my @yearmonth_days;
 
 while (my $arg = shift) {

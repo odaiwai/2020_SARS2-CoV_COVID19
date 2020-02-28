@@ -78,10 +78,11 @@ def main():
 
     if len(sys.argv) > 1:
         # parse an existing file
-        infh = open(sys.argv[1], "r")
-        html_source = infh.read()
-        infh.close()
-        overwrite = 0
+        if sys.argv[1]  != 'silent':
+            infh = open(sys.argv[1], "r")
+            html_source = infh.read()
+            infh.close()
+            overwrite = 0
     else:
         # Go to the URL and retrieve it
         response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
