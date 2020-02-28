@@ -17,7 +17,7 @@ while (my $line = <$fh>) {
 	chomp $line;
 	my ($year, $url) = split ", ", $line;
 	#my $result = `wget -nc $url`;
-	my $csv = `lynx -dump $url | grep csv | cut -d' ' -f5`;
+	my $csv = `cd 01_download_data; lynx -dump $url | grep csv | cut -d' ' -f5`;
 	chomp $csv;
 	print "Downloading $csv...\n";
 	my $result = `wget -nc $csv`;
