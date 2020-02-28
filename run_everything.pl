@@ -12,10 +12,10 @@ use strict;
 use warnings;
 use utf8;
 
-my $verbose = 1;
+my $verbose = 0;
 my $options = "silent";
-my @getters = `ls get_*.p?`;
-my @parsers = `ls process_*.p?`;	
+my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh get_press_releases.pl/;
+my @parsers = qw/process_press_releases.pl process_ncor_2019_data.py/;
 
 while (my $arg = shift(@ARGV)) {
 	if ( $arg =~ /verbose/ ) { $verbose = 1; }
