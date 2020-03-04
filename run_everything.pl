@@ -26,8 +26,8 @@ if ( $verbose ) {
 }
 
 
-print run_all_scripts(@getters);
-#print run_all_scripts(@parsers);
+run_all_scripts(@getters);
+#run_all_scripts(@parsers);
 
 ## end
 sub run_all_scripts {
