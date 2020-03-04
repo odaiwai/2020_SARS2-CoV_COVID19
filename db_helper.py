@@ -60,9 +60,12 @@ def rows_from_query(dbc, query_str):
 
      return results
 
-def make_tables_from_dict(dbc, tabledefs):
+def make_tables_from_dict(dbc, tabledefs, VERBOSE):
     # Make the Database tables
     print ('Dropping and Building Tables...')
     for table in tabledefs.keys():
         result = dbc.execute('DROP TABLE IF EXISTS [{}]'.format(table))
-        result = dbc.execute('CREATE TABLE [{}] ({});'.format(table, tabledefs[table]))
+        sql_cmd = 'CREATE TABLE [{}] ({});'.format(table, tabledefs[table])
+        if VERBOSE:
+            print(sql_cmd)
+        result = dbc.execute(sql_cmd)
