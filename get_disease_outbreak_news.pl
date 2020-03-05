@@ -15,10 +15,14 @@ use WWW::Mechanize;
 
 
 #my $baseurl = "https://www.who.int/csr/don/en/";
-my $verbose = 1;
+my $verbose = 0;
 my $baseurl = "https://www.who.int/csr/don/archive/disease/novel_coronavirus/en/";
-my $baseurl2 = "https://3g.dxy.cn/newh5/view/pneumonia?scene=2";
+#my $baseurl2 = "https://3g.dxy.cn/newh5/view/pneumonia?scene=2";
 
+for my $arg (@ARGV) {
+	if ( $arg =~ /silent/) { $verbose = 0; }
+	if ( $arg =~ /verbose/) { $verbose = 1; }
+}
 # process the options
 my @wget_options = qw/-nc/;
 push @wget_options, "-v" if $verbose;
@@ -32,9 +36,9 @@ for my $sitrep (@sitreps) {
 	chomp $sitrep;
 	$sitrep = sanitise_url($sitrep);
 	my $cmd = "wget $wget_options $sitrep";
-	print "$cmd\n";
+	print "$cmd\n" if $verbose;
 	my $result = `cd 01_download_data; $cmd`;
-	print "$result\n";
+	print "$result\n" if $verbose;
 }
 
 
