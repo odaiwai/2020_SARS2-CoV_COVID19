@@ -10,6 +10,7 @@ import datetime
 import re
 from db_helper import *
 
+
 def make_table_of_disease_by_month():
     # drop the combined table and build it again
     dbc.execute('DROP TABLE IF EXISTS [disease_by_month];')
@@ -20,16 +21,17 @@ def make_table_of_disease_by_month():
     for disease in diseases:
         table_spec += ', {} Int'.format(disease)
 
-    print (table_spec)
+    print(table_spec)
     dbc.execute('CREATE TABLE [disease_by_month] ({})'.format(table_spec))
     dbc.execute('BEGIN')
 
     #print (diseases, type(diseases))
     for disease in diseases:
         print('Disease: ', disease)
-        all_cases = rows_from_query(dbc, 'select * from  [{}] order by year;'.format(disease))
+        all_cases = rows_from_query(
+            dbc, 'select * from  [{}] order by year;'.format(disease))
         for year_data in all_cases:
-            print (year_data)
+            print(year_data)
             year = year_data[0]
             for month in range(1, 13):
                 date = '{:04d}/{:02d}/{:02d}'.format(year, month, 15)
@@ -38,12 +40,15 @@ def make_table_of_disease_by_month():
                     cases = int(0)
 
                 # Build the SQL command to make the row.
-                cmd = 'INSERT INTO [disease_by_month] (Date, {}) Values (\"{}\", {}) '.format(disease, date, cases)
-                cmd += 'ON CONFLICT(Date) DO UPDATE SET {} = {} where date = \"{}\";'.format(disease, cases, date)
-                print (cmd)
+                cmd = 'INSERT INTO [disease_by_month] (Date, {}) Values (\"{}\", {}) '.format(
+                    disease, date, cases)
+                cmd += 'ON CONFLICT(Date) DO UPDATE SET {} = {} where date = \"{}\";'.format(
+                    disease, cases, date)
+                print(cmd)
                 dbc.execute(cmd)
 
     dbc.execute('COMMIT')
+
 
 def hk_population():
     pop_data = """
@@ -95,13 +100,14 @@ def hk_population():
         growth_rate = ((this_year_pop/last_year_pop)**(1/12))-1
         for month in range(1, 13):
             date = datetime.datetime(year, month, 15, 12, 0, 0)
-            this_month_pop = last_year_pop * ( 1 + growth_rate) ** month
+            this_month_pop = last_year_pop * (1 + growth_rate) ** month
             monthly_pop[date] = int(this_month_pop)
 
     #print (monthly_pop)
 
     return monthly_pop
-#Constants
+# Constants
+
 
 # The Main Loop
 if __name__ == '__main__':
@@ -110,17 +116,19 @@ if __name__ == '__main__':
     FIRSTRUN = 0
 
     # Check if the table disease_by_month exists
-    check = array_from_query(dbc, 'select name from sqlite_master where name like \'disease_by_month\';')
+    check = array_from_query(
+        dbc, 'select name from sqlite_master where name like \'disease_by_month\';')
     if (FIRSTRUN is True) or (len(check) == 0):
         make_table_of_disease_by_month()
 
     # get the Data in Pandas Dataframe
     #df = pd.read_sql_query('select * from [disease_by_month];', db_connect)
-    #print(df)
-    #print(type(df))
+    # print(df)
+    # print(type(df))
 
     # get the list of dates and convert to date objects
-    date_strs = array_from_query(dbc, 'select Date from [disease_by_month] order by date;')
+    date_strs = array_from_query(
+        dbc, 'select Date from [disease_by_month] order by date;')
     dates = []
     for date_str in date_strs:
         year, month, day = date_str.split('/')
@@ -128,38 +136,42 @@ if __name__ == '__main__':
         date = datetime.datetime(int(year), int(month), int(day), 12, 0)
         dates.append(date)
 
-    #print(dates)
+    # print(dates)
     hk_pop = hk_population()
 
-    axis_range = [datetime.datetime(1997,1,1), datetime.datetime(2020,1,1)]
+    axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]
     diseases = array_from_query(dbc, 'select distinct(ref) from diseases;')
-    disease_full_names = dict_from_query(dbc, 'select distinct(ref), name from [diseases];')
+    disease_full_names = dict_from_query(
+        dbc, 'select distinct(ref), name from [diseases];')
 
     for disease in diseases:
-        cases = array_from_query(dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
+        cases = array_from_query(
+            dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
         print('Plotting {}...'.format(disease))
         fig, ax = plt.subplots()
         fig.suptitle('Notifiable Infections and Diseases in HK')
         ax.set_title(disease_full_names[disease])
         ax.scatter(dates, cases, label=disease, )
-        ax.set(xlabel='Date', xlim=axis_range, ylabel='Reported Cases per month')
-        
+        ax.set(xlabel='Date', xlim=axis_range,
+               ylabel='Reported Cases per month')
+
         # population on the second axis
         ax2 = ax.twinx()
-        ax2.plot(hk_pop.keys(), hk_pop.values(), label='Population', color='red')
+        ax2.plot(hk_pop.keys(), hk_pop.values(),
+                 label='Population', color='red')
         ax2.set(ylabel='Population')
 
         ax.legend()
         ax2.legend()
         #fig, ax = plt.subplots()
-        #ax.set(ylim=[0,max(cases)])
+        # ax.set(ylim=[0,max(cases)])
 
-        fig.savefig('plots/' + disease + '.png', format = 'png')
+        fig.savefig('plots/' + disease + '.png', format='png')
 
         plt.close()
 
     #plot = plt.plot(dataframe)
-    #plot.show()
+    # plot.show()
 
     # Tidy up and close.
     dbc.close()
