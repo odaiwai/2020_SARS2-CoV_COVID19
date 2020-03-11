@@ -25,3 +25,8 @@ The WHO is usually behind the times. Trailing indicator.
 ## Centre for Health Protection (HK) data
  - get_historic.pl - Get historic NID data 
  - process_nid_data.pl - Parse the Non-Communicable Infectionous Diseases data
+
+# 2020/03/11 - NOTES
+ - This was started on the 5th of January, when initial reports of some sort of
+   illness in Wuhan were started to appear in Hong Kong.  Hence the name of the
+   repository, and many reference to Wuhan Coronvirus, etc.  
