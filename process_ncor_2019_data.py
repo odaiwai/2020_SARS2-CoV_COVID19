@@ -461,7 +461,7 @@ def make_plots_from_jhu():
         
         plt.close()
     all_ax.legend(loc='upper left')
-    all_fig.savefig('plots/All_Confirmed', format = 'png')
+    all_fig.savefig('plots/All_Confirmed.png', format = 'png')
     return 0
 
 class Report:
