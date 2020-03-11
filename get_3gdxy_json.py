@@ -77,18 +77,27 @@ def main():
     overwrite = 1
 
     if len(sys.argv) > 1:
-        # parse an existing file
-        if sys.argv[1]  != 'silent':
-            infh = open(sys.argv[1], "r")
-            html_source = infh.read()
-            infh.close()
-            overwrite = 0
-    else:
+        for index in range(1, len(sys.argv)):
+            # parse an existing file
+            if sys.argv[index] == 'silent':
+                VERBOSE = 0
+            elif sys.argv[index] == 'verbose':
+                VERBOSE = 1
+            else: 
+                with open(sys.argv[index], "r") as infh:
+                    html_source = infh.read()
+                    overwrite = 0
+
+    if len(html_source) == 0:
         # Go to the URL and retrieve it
-        response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
-        #response = requests.get(r'https://ncov.dxy.cn/ncovh5/view/pneumonia')
+        #response = requests.get(r'https://3g.dxy.cn/newh5/view/pneumonia')
+        response = requests.get(r'https://ncov.dxy.cn/ncovh5/view/pneumonia')
         html_source = response.content.decode()
 
+    if len(html_source) == 0:
+        print('BARF! no data!', len(html_source))
+        exit()
+    #print (len(html_source))
 
     # try to figure out when this file was made so we can timestamp it.
     # The overall strategy is to find the latest time reference in the html

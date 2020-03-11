@@ -16,7 +16,7 @@ def make_table_of_disease_by_month():
     dbc.execute('DROP TABLE IF EXISTS [disease_by_month];')
 
     # get a list of the diseases
-    diseases = array_from_query(dbc, 'select distinct(ref) from [diseases];')
+    diseases = list_from_query(dbc, 'select distinct(ref) from [diseases];')
     table_spec = 'Date Text UNIQUE PRIMARY KEY'
     for disease in diseases:
         table_spec += ', {} Int'.format(disease)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     FIRSTRUN = 0
 
     # Check if the table disease_by_month exists
-    check = array_from_query(
+    check = list_from_query(
         dbc, 'select name from sqlite_master where name like \'disease_by_month\';')
     if (FIRSTRUN is True) or (len(check) == 0):
         make_table_of_disease_by_month()
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     # print(type(df))
 
     # get the list of dates and convert to date objects
-    date_strs = array_from_query(
+    date_strs = list_from_query(
         dbc, 'select Date from [disease_by_month] order by date;')
     dates = []
     for date_str in date_strs:
@@ -140,12 +140,12 @@ if __name__ == '__main__':
     hk_pop = hk_population()
 
     axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]
-    diseases = array_from_query(dbc, 'select distinct(ref) from diseases;')
+    diseases = list_from_query(dbc, 'select distinct(ref) from diseases;')
     disease_full_names = dict_from_query(
         dbc, 'select distinct(ref), name from [diseases];')
 
     for disease in diseases:
-        cases = array_from_query(
+        cases = list_from_query(
             dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
         print('Plotting {}...'.format(disease))
         fig, ax = plt.subplots()

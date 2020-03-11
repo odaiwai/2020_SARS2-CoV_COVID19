@@ -5,6 +5,7 @@ historic/
 *.sqlite
 *.swp
 JHU_data/
+
 __pycache__
 
 01_download_data/
