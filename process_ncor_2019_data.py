@@ -17,6 +17,7 @@ from db_helper import * # This is a library of my own database routines - it jus
                         # wraps sqlite commands into handier methods I like
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.dates as mdates # for date formatting
 #import pandas as pd
 #import numpy as np
 
@@ -158,8 +159,6 @@ def read_3g_dxy_cn_json():
 
         if match and not(filename in already_processed):
             dbdo(dbc, 'BEGIN', VERBOSE)
-            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
             date = match[1]
             time = match[2]
             timestamp = '{}{}'.format(date, time)
@@ -216,6 +215,9 @@ def read_3g_dxy_cn_json():
                     sql_cmd = 'INSERT into [cn_city] ({}) Values ({})'.format(cfields, values)
                     dbdo(dbc, sql_cmd, VERBOSE)
 
+            # Only add to the database on success addition
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
             dbdo(dbc, 'COMMIT', VERBOSE)
 
     return 1
@@ -229,8 +231,8 @@ def read_jhu_data():
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     yankdate = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
-    altdate  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    fixstate = re.compile(r'^"(.*?),\s+(.*)"') # replaces '"Tempe, AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    altdate  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
+    fixstate = re.compile(r'"(.*?),\s+(.*)"') # replaces '"Tempe, AZ", a, b, c' with 'Tempe_AZ, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
     # There's been a bit of inconsistency with naming of countries
@@ -240,12 +242,16 @@ def read_jhu_data():
                           'North Ireland': 'Ireland',       # makes a bit more sense - travel
                           ' Azerbaijan': 'Azerbaijan', # Spurious Spacing issue
                           'US': 'USA',
-                          'Hong Kong': 'Hong Kong SAR', # This is actually a reasonable change
-                          'Macau': 'Macau SAR',         # This is actually a reasonable change
-                          'Macao SAR': 'Macau SAR',     # This is not
-                          'Taipei and environs': 'Taiwan', # Taiwan is *not* a province of China
+                          'Mainland China': 'China', 
+                          'Hong Kong SAR': 'Hong Kong', # stick with initial usage
+                          'Macao SAR': 'Macau',         # Stick with initial usage
+                          'Taipei and environs': 'Taiwan', # Taiwan, just Taiwan 
+                          'Taiwan*': 'Taiwan',          # Taiwan 
                           'occupied Palestinian territory': 'Palestine', # Pointless change
-                          'Iran (Islamic Republic of)': 'Iran' # Are there multiple Irans?
+                          'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
+                          'Holy See': 'Vatican City',
+                          'Korea_South': 'South Korea',
+                          'Cote d\'Ivoire': 'Ivory Coast'
                           }
 
 
@@ -254,9 +260,7 @@ def read_jhu_data():
         
         if match and (filename not in already_processed):
             dbdo(dbc, 'BEGIN', VERBOSE)
-            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             month, day, year = match[1], match[2], match[3]
-            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
             filedate = '{:04d}-{:02d}-{:02d}'.format(int(year), int(month), int(day))
             print (filedate, filename)
             with open('{}/{}'.format(datadir, filename), mode='r', encoding='utf-8-sig') as infile:
@@ -273,6 +277,8 @@ def read_jhu_data():
                     # American Provinces are "City, State" because Yanks, so that needs to be fixed
                     line = fixstate.sub(r'\1_\2', line.rstrip())
                     components = line.split(',')
+                    
+                    #print(components)
 
                     # Normalise some of the inputs
                     for normalise in normalise_countries.keys():
@@ -303,8 +309,8 @@ def read_jhu_data():
                     #build up the values list
                     values = [timestamp,
                               '"{}"'.format(filedate),      # Date of Report file
-                              '"{}"'.format(components[0]), # Region always first 
-                              '"{}"'.format(components[1]), # Country always second
+                              '"{}"'.format(components[0].strip()), # Region always first 
+                              '"{}"'.format(components[1]).strip(), # Country always second
                               '"{}"'.format(last_update)    # Date of last report
                               ]
 
@@ -323,8 +329,11 @@ def read_jhu_data():
                          format(','.join(fields), 
                                 ','.join(values)), VERBOSE)
                         
+            # Only add to the database on success addition
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
             dbdo(dbc, 'COMMIT', VERBOSE)
-            
+                    
 
 
     return len(files)
@@ -406,12 +415,14 @@ def make_plots_from_jhu():
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'), 
-                  datetime.datetime.strptime(final_date_str + ' 23:59', '%Y-%m-%d %H:%M')]
+                  datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')]
     
     all_fig, all_ax = plt.subplots(figsize=FIGSIZE)
     all_fig.suptitle('SARS2/2019_NCorV (COVID19) for All Reporting Countries')
     all_ax.set(title = 'All Countries')
     all_ax.set(xlabel='Reporting Date', xlim = axis_range, ylabel='Reported Cases')
+    all_ax.format_data = mdates.DateFormatter('%Y-%m-%d')
+    all_fig.autofmt_xdate()
 
     
     for country in countries:
@@ -420,8 +431,8 @@ def make_plots_from_jhu():
         sick = list_from_query(dbc, 'SELECT (Confirmed-Dead-Cured) from [{}] order by Date'.format(country))
         dead = list_from_query(dbc, 'SELECT Dead from [{}] order by Date'.format(country))
         cure = list_from_query(dbc, 'SELECT Cured from [{}] order by Date'.format(country))
-        cfr = list_from_query(dbc, 'SELECT Cfr from [{}] order by Date'.format(country))
-        crr = list_from_query(dbc, 'SELECT Crr from [{}] order by Date'.format(country))
+        cfr  = list_from_query(dbc, 'SELECT Cfr from [{}] order by Date'.format(country))
+        crr  = list_from_query(dbc, 'SELECT Crr from [{}] order by Date'.format(country))
 
         print (country, conf[-1], style_list[plot_style_index])
         
@@ -440,7 +451,14 @@ def make_plots_from_jhu():
         # Primary Axis
         ax.set(title = 'Reported Cases (JHU CSSE Data.)'.format(style_list[plot_style_index]))
         ax.set(xlabel='Date', xlim = axis_range, ylabel='Reported Cases')
-        ax.stackplot(dates, sick, cure, dead, labels=['Still Sick', 'cured', 'dead'])
+        ax.format_data = mdates.DateFormatter('%Y-%m-%d')
+        fig.autofmt_xdate()
+        ax.stackplot(dates, sick, cure, dead, labels=['Sick', 'cured', 'dead'])
+        box = dict(boxstyle = 'square', fc='white')
+        labelx = dates[-1]
+        ax.annotate('Sick {:,.0f}'.format(sick[-1]), (labelx, sick[-1]/2), ha='right', bbox = box)
+        ax.annotate('Cured {:,.0f}'.format(cure[-1]), (labelx, conf[-1]-dead[-1]-cure[-1]/2), ha='right', bbox = box)
+        ax.annotate('Dead {:,.0f}'.format(dead[-1]), (labelx, conf[-1]-dead[-1]/2), ha='right', bbox = box)
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.legend(loc='upper left')
         
@@ -448,6 +466,8 @@ def make_plots_from_jhu():
         ax2 = ax.twinx()
         ax2.plot(dates, cfr, label='Case Fatality Rate', color='red')
         ax2.plot(dates, crr, label='Case Recovery Rate', color='blue')
+        ax2.annotate('CFR {:,.1f}%'.format(cfr[-1]), (labelx, cfr[-1]), ha='left', bbox = box)
+        #ax2.annotate('CRR {:,.1f}%'.format(crr[-1]), (labelx, crr[-1]), ha='right', bbox = box)
         ax2.set(ylim=(0.0,100.0), ylabel='Percentage')
         ax2.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.1f}%'))
         ax2.legend(loc='center left')
@@ -608,12 +628,13 @@ def main():
         make_tables()
         read_hksarg_pr()
         read_china_places()
-        read_3g_dxy_cn_json()
-        read_jhu_data()
-    else:
+
+    if (UPDATE or FIRSTRUN):
         read_jhu_data()
         read_3g_dxy_cn_json()
         make_summary_tables()
+
+    if PLOTS:
         #make_plots_from_dxy()
         make_plots_from_jhu()
 
@@ -622,12 +643,18 @@ def main():
 if __name__ == '__main__':
     VERBOSE = 1
     FIRSTRUN = 0
+    UPDATE = 0
+    PLOTS = 1
     DATADIR = '01_download_data'
     for arg in sys.argv:
         if arg == 'VERBOSE':
             VERBOSE = 1
         if arg == 'FIRSTRUN':
             FIRSTRUN = 1
+        if arg == 'UPDATE':
+            UPDATE = 1
+        if arg == 'PLOTS':
+            PLOTS = 1
     
     db_connect = sqlite3.connect('ncorv2019.sqlite')
     dbc = db_connect.cursor()

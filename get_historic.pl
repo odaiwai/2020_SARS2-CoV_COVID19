@@ -12,14 +12,18 @@ use warnings;
 use utf8;
 
 my $infile = "urls.dat";
+my $datadir = "01_download_data";
+
 open (my $fh, "<", $infile) or die "Can't open $infile $!";
 while (my $line = <$fh>) {
 	chomp $line;
 	my ($year, $url) = split ", ", $line;
 	#my $result = `wget -nc $url`;
-	my $csv = `cd 01_download_data; lynx -dump $url | grep csv | cut -d' ' -f5`;
-	chomp $csv;
-	print "Downloading $csv...\n";
-	my $result = `wget -nc $csv`;
+	if ($year ne 'Main') {
+		my $csv = `cd 01_download_data; lynx -dump $url | grep csv | cut -d' ' -f5`;
+		chomp $csv;
+		print "Downloading $csv...\n";
+		my $result = `wget --directory-prefix $datadir -nc $csv`;
+	}
 }
 

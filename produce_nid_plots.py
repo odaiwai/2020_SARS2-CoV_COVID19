@@ -3,11 +3,17 @@
    historic database."""
 
 import matplotlib.pyplot as plt
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 import pandas as pd
 import numpy as np
 import sqlite3
 import datetime
 import re
+# Future versions of pandas will require you to explicitly register matplotlib converters.
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+# my DB Helper
 from db_helper import *
 
 
@@ -138,6 +144,11 @@ if __name__ == '__main__':
 
     # print(dates)
     hk_pop = hk_population()
+    hk_pop_dates = []
+    hk_pop_values = []
+    for date in hk_pop.keys():
+        hk_pop_dates.append(date)
+        hk_pop_values.append(hk_pop[date])
 
     axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]
     diseases = list_from_query(dbc, 'select distinct(ref) from diseases;')
@@ -157,7 +168,7 @@ if __name__ == '__main__':
 
         # population on the second axis
         ax2 = ax.twinx()
-        ax2.plot(hk_pop.keys(), hk_pop.values(),
+        ax2.plot(hk_pop_dates, hk_pop_values,
                  label='Population', color='red')
         ax2.set(ylabel='Population')
 
