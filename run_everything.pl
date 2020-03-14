@@ -14,7 +14,7 @@ use utf8;
 
 my $verbose = 0;
 my $options = "silent";
-my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh get_press_releases.pl get_disease_outbreak_news.pl/;
+my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh get_press_releases.pl get_disease_outbreak_news.pl get_hgis_data.sh/;
 my @parsers = qw/process_press_releases.pl process_ncor_2019_data.py/;
 
 while (my $arg = shift(@ARGV)) {
