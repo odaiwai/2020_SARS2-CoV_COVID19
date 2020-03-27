@@ -58,9 +58,10 @@ def make_tables():
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
                     'curedCount Integer'),
         'jhu_git': ('Timestamp Integer, Date Text, '
-                    'Country Text, Province Text, Last_Update Text, '
-                    'Confirmed Integer, Deaths Integer, Recovered Integer, '
-                    'Latitude Real, Longitude Real'),
+                    'FIPS Integer, Admin2 Text, Country Text, Province Text, '
+                    'Last_Update Text, '
+                    'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
+                    'Latitude Real, Longitude Real, Combined_Key Text'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
                    'ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, '
                    'ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, '
@@ -154,6 +155,7 @@ def read_3g_dxy_cn_json():
     files = os.listdir(DATADIR)
     areastat = re.compile(r'^([0-9]{8})_([0-9]{6})_getAreaStat.json$')
     already_processed = list_from_query(dbc, 'select filename from files;') 
+    print ('Reading 3G+DXY.CN data')
     for filename in files:
         match = areastat.match(filename)
 
@@ -182,7 +184,7 @@ def read_3g_dxy_cn_json():
 
                 # Build up the string of Columns and values depending on what's in the JSON
                 pfields = pfields_base
-                print ('Province:', province.keys(), province)
+                #print ('Province:', province.keys(), province)
                 for key in province.keys():
                     if key != 'cities':
                         pfields += ', {}'.format(key)
@@ -198,7 +200,7 @@ def read_3g_dxy_cn_json():
                 # Now do the same for every city in the province
                 for city in province['cities']:
                     city_en = value_from_query(dbc, 'select distinct(ADM2_EN) from [places] where ADM2_ZH like \'{}%\';'.format(city['cityName']))
-                    print ('City:', city.keys(), city)
+                    #print ('City:', city.keys(), city)
                 
                     # Build up the string of Columns and values depending on what's in the JSON
                     cfields = cfields_base
@@ -228,11 +230,13 @@ def read_jhu_data():
     files = os.listdir(datadir)
     #print (files)
     
+    print ('Reading JHU CSSE data')
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     yankdate = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
     altdate  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    fixstate = re.compile(r'"(.*?),\s+(.*)"') # replaces '"Tempe, AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    fixstate = re.compile(r'"(.*?),\s*(.*?)"') # replaces '"Tempe, AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    fixcckey = re.compile(r'"([A-Za-z. ]+?),\s*([A-Za-z. ]+?),\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
     # There's been a bit of inconsistency with naming of countries
@@ -255,7 +259,11 @@ def read_jhu_data():
                           'Korea_South': 'South Korea',
                           'Cote d\'Ivoire': 'Ivory Coast'
                           }
-
+    normalise_fields ={'Country_Region': 'Country',
+                       'Province_State': 'Province',
+                       'Lat': 'Latitude',
+                       'Long_': 'Longitude'
+                          }
 
     for filename in files:
         match = namedate.match(filename)
@@ -271,29 +279,45 @@ def read_jhu_data():
                 line = fixprov.sub(r'\1', lines.pop(0))
                 line = fixspcs.sub(r'_', line.rstrip())
                 fields = ['timestamp', 'date']
-                fields.extend(line.rstrip().split(r','))
-                print (fields)
+                line_fields = line.rstrip().split(r',')
+                # normalise the fields
+                nfields = []
+                for field in line_fields:
+                    if field in normalise_fields.keys():
+                        nfields.append(normalise_fields[field])
+                    else:
+                        nfields.append(field)
+                
+                # The fields can change (23 March 2020), so need to have a more robust way of
+                # handling them
+                fields.extend(nfields)
+                print (line_fields, fields)
 
                 for line in lines:
-                    #print (line)
+                    print (line)
                     # American Provinces are "City, State" because Yanks, so that needs to be fixed
+                    line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
+                    print (line)
                     line = fixstate.sub(r'\1_\2', line.rstrip())
-                    components = line.split(',')
+                    print (line)
+                    line_data = line.split(',')
+                    line_dict = {}
+                    for key, value in zip(nfields, line_data):
+                        line_dict[key] = value
+                    print (line_dict)
                     
-                    #print(components)
-
                     # Normalise some of the inputs
                     for normalise in normalise_countries.keys():
-                        if components[1] == normalise:
-                            components[1] = normalise_countries[normalise]
+                        if line_dict['Country'] == normalise:
+                            line_dict['Country'] = normalise_countries[normalise]
 
-                    if components[1] == 'China' and components[0] == 'Hong Kong':
-                            components[1] = 'Hong Kong'
-                    if components[1] == 'China' and components[0] == 'Macau':
-                            components[1] = 'Macau'
+                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
+                            line_dict['Country'] = 'Hong Kong'
+                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Macau':
+                            line_dict['Country'] = 'Macau'
                     # Date of last update:
                     # check which form the date is in: There's a MDY format and there's a proper ISO
-                    update   = components[2] # always third
+                    update   = line_dict['Last_Update']
                     last_update = 'NULL' # So we can catch it if it falls 
                     match = yankdate.match(update)
                     if match:
@@ -306,29 +330,29 @@ def read_jhu_data():
                     else:
                         match = altdate.match(update)
                         if match:
-                            #print (match)
+                            print (match)
                             last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), int(match[6]))
                     timestamp = last_update.strftime('%Y%m%d%H%M%S')
                     if last_update == 'NULL':    
-                        print ('BARF!', isodate)
+                        print ('BARF!', update)
                         exit()
                     
+                    # if there's empty fields, set them to zero
+                    for key in line_dict.keys():
+                        if line_dict[key] == '':
+                            line_dict[key] = 0
+                    
                     #build up the values list
-                    values = [timestamp,
-                              '"{}"'.format(filedate),      # Date of Report file
-                              '"{}"'.format(components[0].strip()), # Region always first 
-                              '"{}"'.format(components[1]).strip(), # Country always second
-                              '"{}"'.format(last_update)    # Date of last report
-                              ]
-
-                    # if there's no coordinates, don't add them
-                    for index in range(3,len(components)):
-                        if components[index] == '':
-                            components[index] = 0
+                    values = [timestamp, '"{}"'.format(filedate)]
+                    for key in line_dict.keys():
+                        if key in ['Lat, Long_']:
+                            line_dict[key] = float(line_dict[key])
+                        
+                        if type(line_dict[key]) == str:
+                            values.append('"{}"'.format(line_dict[key]))
                         else:
-                            components[index] = float(components[index])
-                            
-                        values.append('{}'.format(components[index]))
+                            values.append('{}'.format(line_dict[key]))
+                        
                     
                         
                     #print (fields, values)
@@ -348,9 +372,9 @@ def make_plot(title, dates, confirmed, dead, cured):
     fig, ax = plt.subplots()
     fig.suptitle('NovelCoronaVirus Cases for {}'.format(title))
     ax.set_title('Date')
-    ax.plot(dates, list(confirmed.values()), label='confirmed')
-    ax.plot(dates, list(dead.values()), label='dead')
-    ax.plot(dates, list(cured.values()), label='cured')
+    ax.plot(dates, list(cured.values()), label='Recovered')
+    ax.plot(dates, list(confirmed.values()), label='Confirmed')
+    ax.plot(dates, list(dead.values()), label='Deaths')
     ax.set(xlabel='Date', xlim = axis_range, ylabel='Reported Cases')
     ax.legend()
     fig.savefig('plots/{}.png'.format(title), format = 'png')
@@ -400,47 +424,107 @@ def make_plots_from_dxy():
     make_plot('GreaterChina', chinadates, china_total_conf, china_total_dead, china_total_cure)
     return 0
 
+def list_of_countries_by_confirmed(final_date_str):
+    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git] where date like \'{}%\';'.format(final_date_str))
+    country_count = {}
+    for country in countries:
+        country_count[country] = value_from_query(dbc, 'SELECT max(confirmed) from [{}]'.format(country))
+    # Create a list of tuples sorted by index 1 i.e. value field     
+    country_tuples = sorted(country_count.items() , reverse=True, key=lambda x: x[1])
+    # Iterate over the sorted sequence
+    countries_by_confirmed = []
+    for elem in country_tuples :
+        countries_by_confirmed.append(elem[0])
+    countries_by_confirmed.append('World')
+    return countries_by_confirmed
+
+
+def keys_values_as_list_from_dict(dict):    
+    keys = [key for key in dict.keys()]
+    values = []
+    keys.sort()
+    for key in keys:
+        values.append(dict[key])
+    return keys, values
+
 def make_days_since_start_plot():
     #Make the rate of increase since 100 cases, plot
     box = dict(boxstyle = 'square', fc='#ffffff80')
+    attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
+    attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
+
+    limitc = 16#MINCASES
+    limitd = 1
+    limitr = 1
+    
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git] where date like \'{}%\' order by confirmed desc;'.format(final_date_str))
+    countries = list_of_countries_by_confirmed(final_date_str)
+
+    max_days = value_from_query(dbc, 'SELECT max(days_since_start) from [China] order by Date DESC limit 1')
     plt.style.use('seaborn-paper')
-    axis_range = [0,70] # fixme later
+    
+    axis_range = [limitd,max_days+7] # fixme later
     since100c_fig, since100c_ax = plt.subplots(figsize=FIGSIZE)
-    since100c_fig.suptitle('SARS2/2019_NCorV (COVID19) for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-    since100c_ax.set(title = 'All Countries')
-    since100c_ax.set(xlabel='Days since 10 cases', xlim = axis_range, ylabel='Reported Cases (includes Recoveries and Deaths)')
+    since100c_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+    since100c_ax.set(title = 'Confirmed cases since no. {}'.format(limitc))
+    since100c_ax.set(xlabel='Days since {} confirmed cases'.format(limitc), xlim = axis_range, ylabel='Reported Cases (includes Recoveries and Deaths)')
     since100c_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-    since100c_ax.set_yscale('log', basey = 2)
+    since100c_ax.set_yscale('log', basey = 10)
     since100c_fig.autofmt_xdate()
     
     since100d_fig, since100d_ax = plt.subplots(figsize=FIGSIZE)
-    since100d_fig.suptitle('SARS2/2019_NCorV (COVID19) for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-    since100d_ax.set(title = 'All Countries')
-    since100d_ax.set(xlabel='Days since 10 cases', xlim = axis_range, ylabel='Deaths')
+    since100d_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+    since100d_ax.set(title = 'Fatalities since no. {}'.format(limitd))
+    since100d_ax.set(xlabel='Days since {} Deaths'.format(limitd), xlim = axis_range, ylabel='Deaths')
     since100d_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-    since100d_ax.set_yscale('log', basey = 2)
+    since100d_ax.set_yscale('log', basey = 10)
     since100d_fig.autofmt_xdate()
-    limit = 1    
+
+    since100r_fig, since100r_ax = plt.subplots(figsize=FIGSIZE)
+    since100r_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+    since100r_ax.set(title = 'Recoveries since no. {}'.format(limitr))
+    since100r_ax.set(xlabel='Days since {} Recoveries'.format(limitr), xlim = axis_range, ylabel='Deaths')
+    since100r_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+    since100r_ax.set_yscale('log', basey = 10)
+    since100r_fig.autofmt_xdate()
+    
     for country in countries:
-        daysc = list_from_query(dbc, 'SELECT days_since_start from [{}] where confirmed > {} order by Date'.format(country, limit))
-        daysd = list_from_query(dbc, 'SELECT days_since_start from [{}] where dead > {} order by Date'.format(country, limit))
-        conf = list_from_query(dbc, 'SELECT Confirmed from [{}] where confirmed > {} order by Date'.format(country, limit))
-        dead = list_from_query(dbc, 'SELECT dead from [{}] where Dead > {} order by Date'.format(country, limit))
+        conf_d = dict_from_query(dbc, 
+                                 'SELECT ROW_NUMBER() OVER (PARTITION BY confirmed > {L} order by date) as days, '
+                                 'confirmed from [{C}] where confirmed > {L} order by Date'.format(C = country, L = limitc))
+        dead_d = dict_from_query(dbc, 
+                                 'SELECT ROW_NUMBER() OVER (PARTITION BY deaths > {L} order by date) as days, '
+                                 ' deaths from [{C}] where deaths > {L} and days_since_start > 0 order by Date'.format(C=country, L=limitd))
+        reco_d = dict_from_query(dbc, 
+                                 'SELECT ROW_NUMBER() OVER (PARTITION BY Recovered > {L} order by date) as days, '
+                                 ' Recovered from [{C}] where Recovered > {L} and days_since_start > 0 order by Date'.format(C=country, L=limitr))
+
+        daysc, conf = keys_values_as_list_from_dict(conf_d)
+        daysd, dead = keys_values_as_list_from_dict(dead_d)
+        daysr, reco = keys_values_as_list_from_dict(reco_d)
         if len(daysd) > 0:
             since100c_ax.plot(daysc, conf)
             since100c_ax.plot([daysc[-1]], [conf[-1]], marker='o', markersize=3)
             since100d_ax.plot(daysd, dead)
             since100d_ax.plot([daysd[-1]], [dead[-1]], marker='o', markersize=3)
-        if country in ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand']:
+        if len(daysr) > 0:
+            since100r_ax.plot(daysr, reco)
+            since100r_ax.plot([daysr[-1]], [reco[-1]], marker='o', markersize=3)
+        if country in ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia']:
             if len(daysd) > 0:
-                since100c_ax.annotate('{}: {:,.0f}'.format(country, conf[-1]), (daysc[-1]+1, conf[-1]), ha='left', bbox = box)
-                since100d_ax.annotate('{}: {:,.0f}'.format(country, dead[-1]), (daysd[-1]+1, dead[-1]), ha='left', bbox = box)
+                since100c_ax.annotate('{}: {:,.0f}'.format(country, conf[-1]), (daysc[-1]+1, conf[-1]), fontsize = 8, ha='left', bbox = box)
+                since100d_ax.annotate('{}: {:,.0f}'.format(country, dead[-1]), (daysd[-1]+1, dead[-1]), fontsize = 8, ha='left', bbox = box)
+            if len(daysr) > 0:
+                since100r_ax.annotate('{}: {:,.0f}'.format(country, reco[-1]), (daysr[-1]+1, reco[-1]), fontsize = 8, ha='left', bbox = box)
             
+    since100c_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
+    since100d_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
+    since100r_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
+    
     since100c_fig.savefig('plots/Confirmed_since_start.png', format = 'png')
     since100d_fig.savefig('plots/Dead_since_start.png', format = 'png')
+    since100r_fig.savefig('plots/Recovered_since_start.png', format = 'png')
     return 0
 
 def make_plots_from_jhu():
@@ -449,19 +533,19 @@ def make_plots_from_jhu():
     """
     start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC  limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git] where date like \'{}%\' order by confirmed desc;'.format(final_date_str))
-    countries.append('World')
-    #style_list = ['default', 'classic'] + sorted(style for style in plt.style.available if style != 'classic')
-    #print (style_list)
-
+    countries = list_of_countries_by_confirmed(final_date_str)
     plt.style.use('seaborn-paper')
+    # styles
+    box = dict(boxstyle = 'square', fc='#ffffff40')
+    attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
+    attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
     
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'), 
                   datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')]
     
     allconf_fig, allconf_ax = plt.subplots(figsize=FIGSIZE)
-    allconf_fig.suptitle('SARS2/2019_NCorV (COVID19) for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+    allconf_fig.suptitle('SARS2-CoV /COVID 19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
     allconf_ax.set(title = 'All Countries')
     allconf_ax.set(xlabel='Reporting Date', xlim = axis_range, ylabel='Reported Cases (includes Recoveries and Deaths)')
     allconf_ax.format_data = mdates.DateFormatter('%Y-%m-%d')
@@ -469,7 +553,7 @@ def make_plots_from_jhu():
     allconf_fig.autofmt_xdate()
 
     allcfr_fig, allcfr_ax = plt.subplots(figsize=FIGSIZE)
-    allcfr_fig.suptitle('SARS2/2019_NCorV (COVID19) for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+    allcfr_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
     allcfr_ax.set(title = 'All Countries')
     allcfr_ax.set(xlabel='Reporting Date', xlim = axis_range, ylabel='Case Fatality Rates', ylim=(0,20))
     allcfr_ax.format_data = mdates.DateFormatter('%Y-%m-%d')
@@ -479,11 +563,11 @@ def make_plots_from_jhu():
     for country in countries:
         date_strs = list_from_query(dbc, 'SELECT Date from [{}] order by Date'.format(country))
         conf = list_from_query(dbc, 'SELECT Confirmed from [{}] order by Date'.format(country))
-        sick = list_from_query(dbc, 'SELECT (Confirmed-Dead-Cured) from [{}] order by Date'.format(country))
-        dead = list_from_query(dbc, 'SELECT Dead from [{}] order by Date'.format(country))
-        cure = list_from_query(dbc, 'SELECT Cured from [{}] order by Date'.format(country))
-        cfr  = list_from_query(dbc, 'SELECT Cfr from [{}] order by Date'.format(country))
-        crr  = list_from_query(dbc, 'SELECT Crr from [{}] order by Date'.format(country))
+        sick = list_from_query(dbc, 'SELECT (Confirmed-deaths-recovered) from [{}] order by Date'.format(country))
+        dead = list_from_query(dbc, 'SELECT deaths from [{}] order by Date'.format(country))
+        cure = list_from_query(dbc, 'SELECT Recovered from [{}] order by Date'.format(country))
+        cfr  = list_from_query(dbc, 'SELECT CFR from [{}] order by Date'.format(country))
+        crr  = list_from_query(dbc, 'SELECT CFR from [{}] order by Date'.format(country))
 
         print (country, conf[-1], cure[-1], sick[-1], dead[-1], cfr[-1])
         
@@ -492,96 +576,103 @@ def make_plots_from_jhu():
         for date in date_strs:
             dates.append(datetime.datetime.strptime(date, '%Y-%m-%d %H:%M'))
         this_axis_range = [dates[0], dates[-1]]
+        if this_axis_range[0] == this_axis_range[1]:
+            this_axis_range[0] = this_axis_range[1] - datetime.timedelta(days = 1)
         #plt.style.use(style_list[plot_style_index])
         #plot_style_index += 1
         #if plot_style_index >= plot_style_index_max:
         #    plot_style_index = 0
 
         fig, ax = plt.subplots(figsize=FIGSIZE)
-        fig.suptitle('SARS2/2019_NCorV (COVID 2019) for {}'.format(country))
+        fig.suptitle('SARS2-CoV / COVID 19 for {}'.format(country))
         # Primary Axis
-        ax.set(title = 'Reported Cases (JHU CSSE Data.)')
+        ax.set(title = '{:,.0f} Reported Cases (JHU CSSE Data.)'.format(conf[-1]))
         ax.set(xlabel='Date', xlim = this_axis_range, ylabel='Reported Cases')
         ax.format_data = mdates.DateFormatter('%Y-%m-%d')
         fig.autofmt_xdate()
-        ax.stackplot(dates, sick, cure, dead, labels=['Sick', 'cured', 'dead'])
-        box = dict(boxstyle = 'square', fc='#ffffff80')
-        labelx = dates[-1]
-        ax.annotate('Sick {:,.0f}'.format(sick[-1]), (labelx, sick[-1]/2), ha='right', bbox = box)
-        ax.annotate('Cured {:,.0f}'.format(cure[-1]), (labelx, conf[-1]-dead[-1]-cure[-1]/2), ha='right', bbox = box)
-        ax.annotate('Dead {:,.0f}'.format(dead[-1]), (labelx, conf[-1]-dead[-1]/2), ha='right', bbox = box)
+        ax.stackplot(dates, cure, sick, dead, labels=['Recovered', 'Sick', 'Deaths'], colors=['green', 'orange', 'black'])
+        labelx = dates[len(dates)-2]
+        ax.annotate('Recovered {:,.0f}'.format(cure[-1]), (labelx, cure[-1]/2), fontsize = 8, ha='right', bbox = box)
+        ax.annotate('Sick {:,.0f}'.format(sick[-1]), (labelx, cure[-1] + conf[-1]/2 - dead[-1]), fontsize = 8, ha='right', bbox = box)
+        ax.annotate('deaths {:,.0f}'.format(dead[-1]), (labelx, conf[-1] - dead[-1]/2), fontsize = 8, ha='right', bbox = box)
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.legend(loc='upper left')
         
         # Secondary Axis
         ax2 = ax.twinx()
         ax2.plot(dates, cfr, label='Case Fatality Rate', color='red')
-        ax2.plot(dates, crr, label='Case Recovery Rate', color='blue')
-        ax2.annotate('CFR {:,.1f}%'.format(cfr[-1]), (labelx, cfr[-1]), ha='left', bbox = box)
+        #ax2.plot(dates, crr, label='Case Recovery Rate', color='blue')
+        ax2.annotate('CFR {:,.1f}%'.format(cfr[-1]), (labelx, cfr[-1]), fontsize = 8, ha='left', bbox = box)
         #ax2.annotate('CRR {:,.1f}%'.format(crr[-1]), (labelx, crr[-1]), ha='right', bbox = box)
-        ax2.set(ylim=(0.0,100.0), ylabel='Percentage')
+        ax2.set(ylim=(0.0,15.0), ylabel='Percentage')
         ax2.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.1f}%'))
-        ax2.legend(loc='center left')
-
+        ax2.legend(loc='lower left')
+        fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
+    
         fig.savefig('plots/{}.png'.format(country), format = 'png')
         
          # Add to the all countries plot
         if (country != 'World' and conf[-1] >= FACTOR * max_cases):
             allconf_ax.plot(dates, conf, label='{}: {:,.0f}'.format(country, conf[-1]))
-            allconf_ax.annotate('{}'.format(country), (labelx, conf[-1]), ha='left', bbox = box)
+            allconf_ax.annotate('{}'.format(country), (labelx, conf[-1]), fontsize = 8, ha='left', bbox = box)
             allcfr_ax.plot(dates, cfr, label='{}: {:,.2f}%'.format(country, cfr[-1]))
-            allcfr_ax.annotate('{}'.format(country), (labelx, cfr[-1]), ha='left', bbox = box)
+            allcfr_ax.annotate('{}'.format(country), (labelx, cfr[-1]), fontsize = 8, ha='left', bbox = box)
             
         
         plt.close()
-    allconf_ax.legend(loc='upper left', ncol = 2)
+    allconf_ax.legend(loc='best', ncol = 2, fontsize = 8)
+    allconf_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
     allconf_fig.savefig('plots/All_Confirmed.png', format = 'png')
-    allcfr_ax.legend(loc='upper left', ncol = 2)
+
+    allcfr_ax.legend(loc='best', ncol = 2, fontsize = 8)
+    allcfr_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
     allcfr_fig.savefig('plots/All_CFR.png', format = 'png')
     return 0
 
 class Report:
-    def __init__(self, confirmed, dead, cured):
-        """ confirmed is all confirmed cases, it *includes* cured and dead."""
+    def __init__(self, confirmed, deaths, cured):
+        """ confirmed is all confirmed cases, it *includes* cured and deaths."""
         self.confirmed = confirmed
-        self.dead      = dead
+        self.deaths      = deaths
         self.cured     = cured
         if confirmed > 0:
-            self.cfr = float(dead / confirmed)  # Case Fatality Rate
+            self.cfr = float(deaths / confirmed)  # Case Fatality Rate
             self.crr = float(cured / confirmed) # Case Recovery Rate
         else:
             self.cfr = 0.00
             self.crr = 0.00
 
-    def update(self, confirmed, dead, cured):
+    def update(self, confirmed, deaths, cured):
         self.confirmed = confirmed
-        self.dead      = dead
+        self.deaths      = deaths
         self.cured     = cured
         if confirmed > 0:
-            self.cfr = float(dead / confirmed)  # Case Fatality Rate
+            self.cfr = float(deaths / confirmed)  # Case Fatality Rate
             self.crr = float(cured / confirmed) # Case Recovery Rate
         else:
             self.cfr = 0.00
             self.crr = 0.00
-        return list(self.confirmed, self.dead, self.cured, self.cfr, self.crr)
+        return list(self.confirmed, self.deaths, self.cured, self.cfr, self.crr)
 
     def get_all(self):
-        return list(self.confirmed, self.dead, self.cured, self.cfr, self.crr)
+        return list(self.confirmed, self.deaths, self.cured, self.cfr, self.crr)
     
     def __str__(self):
-        return '{}, {}, {}'.format(self.confirmed, self.dead, self.cured)
+        return '{}, {}, {}'.format(self.confirmed, self.deaths, self.cured)
 
 def make_summary_tables():
     """
         Make Tables from JHU data of:
-            1. All confirmed, dead, recovered by date
+            1. All confirmed, deaths, recovered by date
             2. Each Country by Date (sum up provinces)
             3. Each WHO Region by date
     """
+    print ('Make Summary Tables')
     tablespec = ('Date Text, '
                  'Confirmed Integer, '
-                 'Dead Integer, '
-                 'Cured Integer, '
+                 'Deaths Integer, '
+                 'Recovered Integer, '
+                 'Active Integer, '
                  'CFR Real, CRR Real, '
                  'days_since_start Integer, '
                  'new_cases_rate_1day Real, '
@@ -590,106 +681,63 @@ def make_summary_tables():
     for country in countries:
         dbdo(dbc, "BEGIN", VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
-        dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
+        #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
         provinces = list_from_query(dbc, 'select distinct(province) from [jhu_git] where country = \"{}\"'.format(country))
         # Make a Table of all the provinces
         country_dates = {}
+        dbdo(dbc, 
+                ('CREATE TABLE [{C}] AS '
+                '  SELECT distinct(date) || \' 17:00\' AS Date, '
+                '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered,  '
+                '   sum(Active) as Active, '
+                '   ROW_NUMBER() OVER (PARTITION BY confirmed > {M} order by date ) as days_since_start, '
+                '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
+                '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
+                '  FROM [jhu_git] where country = \'{C}\' group by date order by date').format(C=country, M=MINCASES), VERBOSE)
         for province in provinces:
             dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
             # Create the Provincial Tables (also need to split the ISO date into Date and Time)
             dbdo(dbc, 
                  ('CREATE TABLE [{C}.{P}] AS '
-                  '  SELECT date || \' 17:00\' AS Date, last_update, confirmed, deaths, recovered '
-                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\'order by date').format(C=country, P=province), VERBOSE)
-            province_dates = list_from_query(dbc, 'Select date from [{}.{}] order by date'.format(country, province))
-            for date in province_dates:
-                country_dates[date] = country_dates.setdefault(date, 0) + 1
-            #print (country, provinces, province_iso_dates)
-        days_since_start = 0
-        country_dates_sorted = [d for d in country_dates.keys()]
-        country_dates_sorted.sort()
-        #print (country_dates_sorted)
-        for date in country_dates_sorted:
-            country_conf = 0
-            country_dead = 0
-            country_cure = 0
-            for province in provinces:
-                row = row_from_query(
-                    dbc, 
-                    ('select date, confirmed, deaths, recovered from [{}.{}] '
-                     'where date like \'{}%\' order by date').format(country, province, date))
-                #print (country, province, date, row)
-                if row is not None:
-                    date = row[0]
-                    country_conf += row[1]
-                    country_dead += row[2]
-                    country_cure += row[3]
+                  '  SELECT distinct(date) || \' 17:00\' AS Date, '
+                  '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered, '
+                  '   sum(Active) as Active, '
+                  '   ROW_NUMBER() OVER (PARTITION BY confirmed > {M} order by Date) as days_since_start, '
+                  '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
+                  '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
+                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\' group by date order by date').format(C=country, P=province, M=MINCASES), VERBOSE)
 
-            if country_conf > 0:        
-                country_cfr = 100 * float(country_dead / country_conf) # Case Fatality Rate
-                country_crr = 100 * float(country_cure / country_conf) # Case Recovery Rate
-            else:
-                country_cfr = 0.00
-                country_crr = 0.00
-            if country_conf >= 10 or days_since_start>0:
-                days_since_start += 1
-                
-            #print (date, country, provinces, len(provinces), country_conf, country_dead, country_cure, country_cfr, country_crr)
-            dbdo(dbc, 
-                 ('INSERT into [{}] (Date, confirmed, dead, cured, CFR, CRR, days_since_start) '
-                  'Values(\'{}\', {}, {}, {}, {}, {}, {})').format(country, date, country_conf, country_dead, country_cure, country_cfr, country_crr, days_since_start), VERBOSE)
-        if (len(provinces)) == 1:
-            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, provinces[0]), VERBOSE)
-            
         dbdo(dbc, 'COMMIT', VERBOSE)
-
-    ## I have data for China from before the JHU Data
-    #dbdo(dbc, 'BEGIN', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-12 17:00", 48, 1, 6);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-16 17:00", 52, 1, 6);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-17 17:00", 72, 1, 6);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-18 17:00", 128, 1, 6);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-19 17:00", 226, 3, 25);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-20 17:00", 247, 4, 25);', VERBOSE)
-    #dbdo(dbc, 'INSERT into [China] (Date, Confirmed, Dead, Cured) Values ("2020-01-21 17:00", 292, 6, 25);', VERBOSE)
-    #dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
     dbdo(dbc, 'BEGIN', VERBOSE)
     dbdo(dbc, 'DROP TABLE IF EXISTS [World]', VERBOSE)
     dbdo(dbc, 'CREATE TABLE [World] ({})'.format(tablespec), VERBOSE)
-    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_git]')
+    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_git] order by date')
     for date in dates:
-        world_conf = 0
-        world_dead = 0
-        world_cure = 0
+        world = [ 0, 0, 0, 0, 0.0, 0.0]
         for country in countries:
             row = row_from_query(
                 dbc, 
-                ('select date, confirmed, dead, cured from [{}] '
-                    'where date like \'{}%\'').format(country, date))
-            #print (country, date, row)
+                ('select date, Confirmed, Deaths, Recovered, Active from [{}] '
+                    'where date like \'{}%\' and confirmed > 0').format(country, date))
+            print (country, date, row)
             if row is not None:
                 date = row[0]
-                world_conf += row[1]
-                world_dead += row[2]
-                world_cure += row[3]
+                for idx in range(1,len(row)):
+                    #print (idx)
+                    if row[idx] is not None:
+                        world[idx-1] += row[idx]
+                
+                world[4] = 100 * float(world[1] / world[0]) # CFR
+                world[5] = 100 * float(world[2] / world[0]) # CRR
+        world_str = ', '.join(['{}'.format(w) for w in world])
+        
+        #print (country, world, world_str)
+        dbdo(dbc,
+                ('INSERT into [World] (Date, confirmed, deaths, Recovered, Active, CFR, CRR) '
+                 'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
 
-        if world_conf > 0:        
-            world_cfr = 100 * float(world_dead / world_conf)
-            world_crr = 100 * float(world_cure / world_conf)
-        else:
-            world_cfr = 0.00
-            world_crr = 0.00
-
-        #print (date, country,  world_conf, world_dead, world_cure, world_cfr, world_crr)
-        dbdo(dbc, 
-                ('INSERT into [World] (Date, confirmed, dead, cured, CFR, CRR) '
-                'Values(\'{}\', {}, {}, {}, {}, {})').format(date, world_conf, world_dead, world_cure, world_cfr, world_crr), VERBOSE)
-    
-    #dbdo(dbc, 'DROP TABLE IF EXISTS [World without China]', VERBOSE)
-    #dbdo(dbc, 'CREATE TABLE [World without China] ({})'.format(tablespec), VERBOSE)
-    
     dbdo(dbc, 'COMMIT', VERBOSE)
     
     return 0
@@ -706,8 +754,8 @@ def main():
         read_china_places()
 
     if (UPDATE or FIRSTRUN):
-        read_jhu_data()
         read_3g_dxy_cn_json()
+        read_jhu_data()
         make_summary_tables()
 
     if PLOTS:
@@ -721,10 +769,12 @@ if __name__ == '__main__':
     #Some Generics
     FIGSIZE=[9,6]
     FACTOR = 0.001 # 0.1% of World Values
-    VERBOSE = 1
+    VERBOSE = 0
     FIRSTRUN = 0
     UPDATE = 0
     PLOTS = 1
+    MINCASES = 8
+    
     DATADIR = '01_download_data'
     for arg in sys.argv:
         if arg == 'VERBOSE':

@@ -35,6 +35,7 @@ push @plots, "Hong Kong";
 push @plots, "United Kingdom";
 push @plots, "South Korea";
 push @plots, "Confirmed_since_start";
+push @plots, "Recovered_since_start";
 push @plots, "Dead_since_start";
 
 for my $plot (@plots) {
