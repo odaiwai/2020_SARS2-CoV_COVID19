@@ -30,3 +30,8 @@ The WHO is usually behind the times. Trailing indicator.
  - This was started on the 5th of January, when initial reports of some sort of
    illness in Wuhan were started to appear in Hong Kong.  Hence the name of the
    repository, and many reference to Wuhan Coronvirus, etc.  
+
+## 2020/03/27 - NOTES
+
+Yes, I know my Python isn't perfect - this is a work in progress, and I'm
+learning every day.
