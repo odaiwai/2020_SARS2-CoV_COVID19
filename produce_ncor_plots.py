@@ -139,13 +139,13 @@ def make_days_since_start_plot():
         
         for country in countries:
             cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
-                '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit))
+                   '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit))
             results = dict_from_query(dbc, cmd)
             days, cases = keys_values_as_list_from_dict(results)
             ax.plot(days, cases)
-            
+            # Add a marker and optionaly an annotation for the last point
             if len(days) > 0:
-                ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3)
+                ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6)
                 if country in countries_of_interest:
                     # Add a label
                     ax.annotate('{}: {:,.0f}'.format(country, cases[-1]), (days[-1]+1, cases[-1]), fontsize = 8, ha='left', bbox = box)
@@ -208,10 +208,6 @@ def make_plots_from_jhu():
         this_axis_range = [dates[0], dates[-1]]
         if this_axis_range[0] == this_axis_range[1]:
             this_axis_range[0] = this_axis_range[1] - datetime.timedelta(days = 1)
-        #plt.style.use(style_list[plot_style_index])
-        #plot_style_index += 1
-        #if plot_style_index >= plot_style_index_max:
-        #    plot_style_index = 0
 
         fig, ax = plt.subplots(figsize=FIGSIZE)
         fig.suptitle('SARS2-CoV / COVID 19 for {}'.format(country))
@@ -258,120 +254,6 @@ def make_plots_from_jhu():
     allcfr_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
     allcfr_fig.savefig('plots/All_CFR.png', format = 'png')
     return 0
-
-class Report:
-    def __init__(self, confirmed, deaths, cured):
-        """ confirmed is all confirmed cases, it *includes* cured and deaths."""
-        self.confirmed = confirmed
-        self.deaths      = deaths
-        self.cured     = cured
-        if confirmed > 0:
-            self.cfr = float(deaths / confirmed)  # Case Fatality Rate
-            self.crr = float(cured / confirmed) # Case Recovery Rate
-        else:
-            self.cfr = 0.00
-            self.crr = 0.00
-
-    def update(self, confirmed, deaths, cured):
-        self.confirmed = confirmed
-        self.deaths      = deaths
-        self.cured     = cured
-        if confirmed > 0:
-            self.cfr = float(deaths / confirmed)  # Case Fatality Rate
-            self.crr = float(cured / confirmed) # Case Recovery Rate
-        else:
-            self.cfr = 0.00
-            self.crr = 0.00
-        return list(self.confirmed, self.deaths, self.cured, self.cfr, self.crr)
-
-    def get_all(self):
-        return list(self.confirmed, self.deaths, self.cured, self.cfr, self.crr)
-    
-    def __str__(self):
-        return '{}, {}, {}'.format(self.confirmed, self.deaths, self.cured)
-
-def make_summary_tables():
-    """
-        Make Tables from JHU data of:
-            1. All confirmed, deaths, recovered by date
-            2. Each Country by Date (sum up provinces)
-            3. Each WHO Region by date
-    """
-    print ('Make Summary Tables')
-    tablespec = ('Date Text, '
-                 'Confirmed Integer, '
-                 'Deaths Integer, '
-                 'Recovered Integer, '
-                 'Active Integer, '
-                 'CFR Real, CRR Real, '
-                 'days_since_start Integer, '
-                 'new_cases_rate_1day Real, '
-                 'new_cases_rate_7day Real')
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git];')
-    for country in countries:
-        dbdo(dbc, "BEGIN", VERBOSE)
-        dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
-        #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
-        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_git] where country = \"{}\"'.format(country))
-        # Make a Table of all the provinces
-        country_dates = {}
-        dbdo(dbc, 
-                ('CREATE TABLE [{C}] AS '
-                '  SELECT distinct(date) || \' 17:00\' AS Date, '
-                '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered,  '
-                '   sum(Active) as Active, '
-                '   ROW_NUMBER() OVER (PARTITION BY confirmed > {M} order by date ) as days_since_start, '
-                '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
-                '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
-                '  FROM [jhu_git] where country = \'{C}\' group by date order by date').format(C=country, M=MINCASES), VERBOSE)
-        for province in provinces:
-            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
-            # Create the Provincial Tables (also need to split the ISO date into Date and Time)
-            dbdo(dbc, 
-                 ('CREATE TABLE [{C}.{P}] AS '
-                  '  SELECT distinct(date) || \' 17:00\' AS Date, '
-                  '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered, '
-                  '   sum(Active) as Active, '
-                  '   ROW_NUMBER() OVER (PARTITION BY confirmed > {M} order by Date) as days_since_start, '
-                  '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
-                  '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
-                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\' group by date order by date').format(C=country, P=province, M=MINCASES), VERBOSE)
-
-        dbdo(dbc, 'COMMIT', VERBOSE)
-
-    # Make the master Table of all Countries
-    dbdo(dbc, 'BEGIN', VERBOSE)
-    dbdo(dbc, 'DROP TABLE IF EXISTS [World]', VERBOSE)
-    dbdo(dbc, 'CREATE TABLE [World] ({})'.format(tablespec), VERBOSE)
-    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_git] order by date')
-    for date in dates:
-        world = [ 0, 0, 0, 0, 0.0, 0.0]
-        for country in countries:
-            row = row_from_query(
-                dbc, 
-                ('select date, Confirmed, Deaths, Recovered, Active from [{}] '
-                    'where date like \'{}%\' and confirmed > 0').format(country, date))
-            print (country, date, row)
-            if row is not None:
-                date = row[0]
-                for idx in range(1,len(row)):
-                    #print (idx)
-                    if row[idx] is not None:
-                        world[idx-1] += row[idx]
-                
-                world[4] = 100 * float(world[1] / world[0]) # CFR
-                world[5] = 100 * float(world[2] / world[0]) # CRR
-        world_str = ', '.join(['{}'.format(w) for w in world])
-        
-        #print (country, world, world_str)
-        dbdo(dbc,
-                ('INSERT into [World] (Date, confirmed, deaths, Recovered, Active, CFR, CRR) '
-                 'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
-
-    dbdo(dbc, 'COMMIT', VERBOSE)
-    
-    return 0
-
 
 def main():
     # main body
