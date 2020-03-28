@@ -90,7 +90,6 @@ def list_of_countries_by_confirmed(final_date_str):
     countries_by_confirmed.append('World')
     return countries_by_confirmed
 
-
 def keys_values_as_list_from_dict(dict):    
     keys = [key for key in dict.keys()]
     values = []
@@ -101,93 +100,61 @@ def keys_values_as_list_from_dict(dict):
 
 def make_days_since_start_plot():
     #Make the rate of increase since 100 cases, plot
+    
+    # Style and Attributions text
     box = dict(boxstyle = 'square', fc='#ffffff80')
     attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
+    plt.style.use('seaborn-paper')
 
-    limitc = 10#6#MINCASES
-    limitd = 1
-    limitr = 10
-    FACTOR = 0.00001
+    # General Parameters
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M')
     final_date = datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')
-    print (start_date_str, final_date_str)
-    
-    print (start_date, final_date, (final_date - start_date))
     max_days = (final_date - start_date).days
-    axis_range = [start_date, final_date]
-    
+    axis_range = [1, max_days+7]
     countries = list_of_countries_by_confirmed(final_date_str)
     countries.remove('World')
-
-    plt.style.use('seaborn-paper')
+    countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia', 'Macau', 'World']
     
-    axis_range = [limitd,max_days+7] # fixme later
-    since100c_fig, since100c_ax = plt.subplots(figsize=FIGSIZE)
-    since100c_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-    since100c_ax.set(title = 'Confirmed cases since no. {}'.format(limitc))
-    since100c_ax.set(xlabel='Days since {} confirmed cases'.format(limitc), xlim = axis_range, ylabel='Reported Cases (includes Recoveries and Deaths)')
-    since100c_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-    since100c_ax.set_yscale('log', basey = 10)
-    since100c_fig.autofmt_xdate()
+    # Setup the parameters for each graph
+    FACTOR = 0.00001
+    #
+    graphs = []
+    # Contains a list of the parameters
+    graphs.append(['Confirmed', 10, 'Confirmed Cases (includes Deaths, Recoveries)', 'log', 2])
+    graphs.append(['Recovered', 10, 'Recoveries', 'log', 2])
+    graphs.append(['Deaths', 1, 'Deaths', 'log', 2])
     
-    since100d_fig, since100d_ax = plt.subplots(figsize=FIGSIZE)
-    since100d_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-    since100d_ax.set(title = 'Fatalities since no. {}'.format(limitd))
-    since100d_ax.set(xlabel='Days since {} Deaths'.format(limitd), xlim = axis_range, ylabel='Deaths')
-    since100d_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-    since100d_ax.set_yscale('log', basey = 10)
-    since100d_fig.autofmt_xdate()
-
-    since100r_fig, since100r_ax = plt.subplots(figsize=FIGSIZE)
-    since100r_fig.suptitle('SARS2-CoV / COVID19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-    since100r_ax.set(title = 'Recoveries since no. {}'.format(limitr))
-    since100r_ax.set(xlabel='Days since {} Recoveries'.format(limitr), xlim = axis_range, ylabel='Deaths')
-    since100r_ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-    since100r_ax.set_yscale('log', basey = 10)
-    since100r_fig.autofmt_xdate()
-    
-    for country in countries:
-        conf_d = dict_from_query(dbc, 
-                                 'SELECT ROW_NUMBER() OVER (PARTITION BY confirmed > {L} order by date) as days, '
-                                 'confirmed from [{C}] where confirmed > {L} order by Date'.format(C = country, L = limitc))
-        dead_d = dict_from_query(dbc, 
-                                 'SELECT ROW_NUMBER() OVER (PARTITION BY deaths > {L} order by date) as days_since_start, '
-                                 ' deaths from [{C}] where deaths > {L} order by Date'.format(C=country, L=limitd))
-        reco_d = dict_from_query(dbc, 
-                                 'SELECT ROW_NUMBER() OVER (PARTITION BY Recovered > {L} order by date) as days_since_start, '
-                                 ' Recovered from [{C}] where Recovered > {L} order by Date'.format(C=country, L=limitr))
-
-        daysc, conf = keys_values_as_list_from_dict(conf_d)
-        daysd, dead = keys_values_as_list_from_dict(dead_d)
-        daysr, reco = keys_values_as_list_from_dict(reco_d)
-        if len(daysc) > 0:
-            since100c_ax.plot(daysc, conf)
-            since100c_ax.plot([daysc[-1]], [conf[-1]], marker='o', markersize=3)
-        if len(daysd) > 0:
-            since100d_ax.plot(daysd, dead)
-            since100d_ax.plot([daysd[-1]], [dead[-1]], marker='o', markersize=3)
-        if len(daysr) > 0:
-            since100r_ax.plot(daysr, reco)
-            since100r_ax.plot([daysr[-1]], [reco[-1]], marker='o', markersize=3)
-        if country in ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia', 'Macau', 'World']:
-            if len(daysc) > 0:
-                since100c_ax.annotate('{}: {:,.0f}'.format(country, conf[-1]), (daysc[-1]+1, conf[-1]), fontsize = 8, ha='left', bbox = box)
-            if len(daysd) > 0:
-                since100d_ax.annotate('{}: {:,.0f}'.format(country, dead[-1]), (daysd[-1]+1, dead[-1]), fontsize = 8, ha='left', bbox = box)
-            if len(daysr) > 0:
-                since100r_ax.annotate('{}: {:,.0f}'.format(country, reco[-1]), (daysr[-1]+1, reco[-1]), fontsize = 8, ha='left', bbox = box)
+    for graph, limit, description, scale, base in graphs:
+        fig, ax = plt.subplots(figsize=FIGSIZE)
+        fig.suptitle('SARS2-CoV / COVID19 for Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+        ax.set(title = '{} cases since no. {}'.format(graph, limit))
+        ax.set(xlabel='Days since {} {}'.format(limit, graph), xlim = axis_range, ylabel=description)
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+        ax.set_yscale(scale, basey = base)
+        fig.autofmt_xdate()
+        
+        for country in countries:
+            cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
+                '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit))
+            results = dict_from_query(dbc, cmd)
+            days, cases = keys_values_as_list_from_dict(results)
+            ax.plot(days, cases)
             
-    since100c_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
-    since100d_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
-    since100r_fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
-    
-    since100c_fig.savefig('plots/Confirmed_since_start.png', format = 'png')
-    since100d_fig.savefig('plots/Dead_since_start.png', format = 'png')
-    since100r_fig.savefig('plots/Recovered_since_start.png', format = 'png')
+            if len(days) > 0:
+                ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3)
+                if country in countries_of_interest:
+                    # Add a label
+                    ax.annotate('{}: {:,.0f}'.format(country, cases[-1]), (days[-1]+1, cases[-1]), fontsize = 8, ha='left', bbox = box)
+
+        # Attribution on the canvas
+        fig.text(0.5, 0.01, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
+        # save it out
+        fig.savefig('plots/{G}_since_start.png'.format(G=graph), format = 'png')
+        
     return 0
 
 def make_plots_from_jhu():
@@ -412,7 +379,7 @@ def main():
     Go through the download dir and collect all of the various data sources:
     """
     #make_plots_from_dxy()
-    #make_plots_from_jhu()
+    make_plots_from_jhu()
     make_days_since_start_plot()
 
     return 0
