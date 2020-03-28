@@ -453,13 +453,14 @@ def make_days_since_start_plot():
     attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
 
-    limitc = 16#MINCASES
+    limitc = 10#6#MINCASES
     limitd = 1
-    limitr = 1
-    
+    limitr = 10
+    FACTOR = 0.00001
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
     countries = list_of_countries_by_confirmed(final_date_str)
+    countries.remove('World')
 
     max_days = value_from_query(dbc, 'SELECT max(days_since_start) from [China] order by Date DESC limit 1')
     plt.style.use('seaborn-paper')
@@ -503,17 +504,19 @@ def make_days_since_start_plot():
         daysc, conf = keys_values_as_list_from_dict(conf_d)
         daysd, dead = keys_values_as_list_from_dict(dead_d)
         daysr, reco = keys_values_as_list_from_dict(reco_d)
-        if len(daysd) > 0:
+        if len(daysc) > 0:
             since100c_ax.plot(daysc, conf)
             since100c_ax.plot([daysc[-1]], [conf[-1]], marker='o', markersize=3)
+        if len(daysd) > 0:
             since100d_ax.plot(daysd, dead)
             since100d_ax.plot([daysd[-1]], [dead[-1]], marker='o', markersize=3)
         if len(daysr) > 0:
             since100r_ax.plot(daysr, reco)
             since100r_ax.plot([daysr[-1]], [reco[-1]], marker='o', markersize=3)
-        if country in ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia']:
-            if len(daysd) > 0:
+        if country in ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia', 'Macau', 'World']:
+            if len(daysc) > 0:
                 since100c_ax.annotate('{}: {:,.0f}'.format(country, conf[-1]), (daysc[-1]+1, conf[-1]), fontsize = 8, ha='left', bbox = box)
+            if len(daysd) > 0:
                 since100d_ax.annotate('{}: {:,.0f}'.format(country, dead[-1]), (daysd[-1]+1, dead[-1]), fontsize = 8, ha='left', bbox = box)
             if len(daysr) > 0:
                 since100r_ax.annotate('{}: {:,.0f}'.format(country, reco[-1]), (daysr[-1]+1, reco[-1]), fontsize = 8, ha='left', bbox = box)
