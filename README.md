@@ -1,5 +1,5 @@
-# 2020_wuhan_coronavirus
-Some analysis on the Wuhan Corona Virus outbreak of early 2020.
+# 2020 SARs-Cov / COVID 19
+Some analysis on the COVID 19 /  Corona Virus outbreak of early 2020.
 
 A bunch of scripts to get data files from a few sources, and also to process them.
 
@@ -25,11 +25,15 @@ The WHO is usually behind the times. Trailing indicator.
 ## Centre for Health Protection (HK) data
  - get_historic.pl - Get historic NID data 
  - process_nid_data.pl - Parse the Non-Communicable Infectionous Diseases data
+ - I was going to compare to the SARS outbreak, but...
 
 # 2020/03/11 - NOTES
  - This was started on the 5th of January, when initial reports of some sort of
-   illness in Wuhan were started to appear in Hong Kong.  Hence the name of the
+   illness in Wuhan were started to appear in Hong Kong.  Hence the original name of the
    repository, and many reference to Wuhan Coronvirus, etc.  
+ - I've changed it not, as a certain US President is doubling down on using it
+   to stoke up racial resentment, playing right into the Chinese Government's
+   victimhood propaganda.
 
 ## 2020/03/27 - NOTES
 

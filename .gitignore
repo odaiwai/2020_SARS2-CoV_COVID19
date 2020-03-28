@@ -16,3 +16,9 @@ python_scripting.py
 gis
 plots
 urls.dat
+*.code-workspace
+temp.py
+model.csv
+china_admin_boundaries.qgz
+chn*
+query.sql
