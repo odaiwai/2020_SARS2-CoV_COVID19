@@ -27,19 +27,21 @@ if ( $verbose ) {
 	$options = "verbose";
 }
 
-run_all_scripts(@getters);
-`./get_ncor_2019_data.py UPDATE 1>ncorplots.log `;
+#run_all_scripts(@getters);
+`./get_ncor_2019_data.py UPDATE >ncorplots.log 2>&1`;
+`./produce_ncor_plots.py >>ncorplots.log 2>&1`;
 
 #run_all_scripts(@parsers);
 
 my @plots = qw/World China Italy USA Iran Italy France Germany Taiwan Spain 
-				All_CFR All_Confirmed Singapore Macau Vietnam Ireland Poland/;
+				All_CFR All_Confirmed Singapore Macau Vietnam Ireland Poland
+				Switzerland Netherlands/;
 push @plots, "Hong Kong";
 push @plots, "United Kingdom";
 push @plots, "South Korea";
 push @plots, "Confirmed_since_start";
 push @plots, "Recovered_since_start";
-push @plots, "Dead_since_start";
+push @plots, "Deaths_since_start";
 
 for my $plot (@plots) {
 	my $result = `cp "./plots/$plot.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
