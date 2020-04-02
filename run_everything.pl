@@ -14,6 +14,10 @@ use utf8;
 
 my $verbose = 0;
 my $options = "silent";
+my $logfile = "ncorplots.log";
+
+`date > $logfile`;
+
 my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh
 				 get_press_releases.pl get_disease_outbreak_news.pl 
 				 get_hgis_data.sh /;
@@ -27,14 +31,17 @@ if ( $verbose ) {
 	$options = "verbose";
 }
 
-#run_all_scripts(@getters);
-`./get_ncor_2019_data.py UPDATE >ncorplots.log 2>&1`;
-`./produce_ncor_plots.py >>ncorplots.log 2>&1`;
+# run all the getters
+run_all_scripts(@getters);
+
+# Run the JHU file separately as it requires a parameter
+`./get_ncor_2019_data.py UPDATE >>$logfile.log 2>>&1`;
+`./produce_ncor_plots.py >>$logfile.log 2>>&1`;
 
 #run_all_scripts(@parsers);
 
 my @plots = qw/World China Italy USA Iran Italy France Germany Taiwan Spain 
-				All_CFR All_Confirmed Singapore Macau Vietnam Ireland Poland
+				Singapore Macau Vietnam Ireland Poland
 				Switzerland Netherlands/;
 push @plots, "Hong Kong";
 push @plots, "United Kingdom";
@@ -54,7 +61,7 @@ sub run_all_scripts {
 	for my $script (@scripts) {
 		chomp $script;
 		print "Running $script $options...\n" if $verbose;
-		my $result = `./$script $options`;
+		my $result = `./$script $options >>$logfile 2>&1`;
 		print "$result\n" if $verbose;
 		$results ++;
 	}

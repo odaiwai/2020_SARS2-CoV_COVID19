@@ -249,6 +249,10 @@ def read_jhu_data():
                           'Taipei and environs': 'Taiwan', # Taiwan, just Taiwan 
                           'Taiwan*': 'Taiwan',          # Taiwan 
                           'occupied Palestinian territory': 'Palestine', # Pointless change
+                          'West Bank and Gaza': 'Palestine', # Pointless change
+                          'Russian Federation': 'Russia', # Pointless change
+                          'The Bahamas': 'Bahamas', # Pointless change
+                          'Czech Republic': 'Czechia',
                           'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
                           'Holy See': 'Vatican City',
                           'Viet Nam': 'Vietnam',
