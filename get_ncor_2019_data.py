@@ -67,6 +67,18 @@ def make_tables():
             }
     make_tables_from_dict(dbc, tabledefs, VERBOSE)
 
+def cagr(value1, value2, interval):
+    """ Calculate the CAGR (Compound Average Growth Rate) between value1 and value 2 over interval
+        e.g. Value1 is today's data, Value2 is 7 days ago
+    """
+    value1 = float(value1)
+    value2 = float(value2)
+    if value2 == 0 or interval == 0:
+        cagr = -1
+    else:
+        cagr = ((value1/value2) ** (1/interval))-1
+    return cagr
+
 def escaped_list(list):
     """
     Given a list, return it as a comma-separated list, quoted if necessary
@@ -376,48 +388,70 @@ def make_summary_tables():
                  'Confirmed Integer, '
                  'Deaths Integer, '
                  'Recovered Integer, '
-                 'Active Integer, '
-                 'CFR Real, CRR Real, '
-                 'days_since_start Integer, '
-                 'new_cases_rate_1day Real, '
-                 'new_cases_rate_7day Real')
+                 'Active Integer')
     countries = list_from_query(dbc, 'select distinct(country) from [jhu_git];')
+    rounding = 4
     for country in countries:
         dbdo(dbc, "BEGIN", VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
+        dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
         provinces = list_from_query(dbc, 'select distinct(province) from [jhu_git] where country = \"{}\"'.format(country))
         # Make a Table of all the provinces
         country_dates = {}
         dbdo(dbc, 
-                ('CREATE TABLE [{C}] AS '
-                '  SELECT distinct(date) || \' 17:00\' AS Date, '
-                '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered,  '
-                '   sum(Active) as Active, '
-                '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
-                '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
-                '  FROM [jhu_git] where country = \'{C}\' group by date order by date').format(C=country), VERBOSE)
+             ('CREATE TABLE [{C}.temp] AS '
+              '  SELECT distinct(date) || \' 17:00\' AS Date, '
+              '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
+              '   sum(Recovered) as Recovered, sum(Active) as Active '
+              '  FROM [jhu_git] where country = \'{C}\' group by date order by date'
+             ).format(C=country), VERBOSE)
+        dbdo(dbc, 
+             ('CREATE TABLE [{C}] AS '
+              '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+              '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
+              '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
+              '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
+              '   ROUND(Cast(Deaths    as REAL)/(LAG (Deaths,    1, 0) OVER (order by date))-1, {R}) as D1day, '
+              '   ROUND(Cast(Recovered as REAL)/(LAG (Recovered, 1, 0) OVER (order by date))-1, {R}) as R1day, '
+              '   ROUND(CAGR(Confirmed, LAG (Confirmed, 7, 0) OVER (order by date), 7), {R}) as C7day, '
+              '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
+              '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
+              '  FROM [{C}.temp] order by date').format(C=country, R = rounding), VERBOSE)
         for province in provinces:
             dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
+            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
             # Create the Provincial Tables (also need to split the ISO date into Date and Time)
             dbdo(dbc, 
-                 ('CREATE TABLE [{C}.{P}] AS '
+                 ('CREATE TABLE [{C}.{P}.temp] AS '
                   '  SELECT distinct(date) || \' 17:00\' AS Date, '
-                  '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, sum(Recovered) as Recovered, '
-                  '   sum(Active) as Active, '
-                  '   (100*(CAST (sum(Deaths) as REAL) / sum(confirmed))) as CFR, '
-                  '   (100*(CAST (sum(Recovered) as REAL) / sum(confirmed))) as CRR '
-                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\' group by date order by date').format(C=country, P=province), VERBOSE)
+                  '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
+                  '   sum(Recovered) as Recovered, sum(Active) as Active '
+                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\' group by date order by date'
+                  ).format(C=country, P=province, R = rounding), VERBOSE)
+            dbdo(dbc, 
+                 ('CREATE TABLE [{C}.{P}] AS '
+                  '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+                  '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
+                  '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
+                  '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
+                  '   ROUND(Cast(Deaths    as REAL)/(LAG (Deaths,    1, 0) OVER (order by date))-1, {R}) as D1day, '
+                  '   ROUND(Cast(Recovered as REAL)/(LAG (Recovered, 1, 0) OVER (order by date))-1, {R}) as R1day, '
+                  '   ROUND(CAGR(Confirmed, LAG (Confirmed, 7, 0) OVER (order by date), 7), {R}) as C7day, '
+                  '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
+                  '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
+                  '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
 
         dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
-    dbdo(dbc, 'BEGIN', VERBOSE)
     dbdo(dbc, 'DROP TABLE IF EXISTS [World]', VERBOSE)
-    dbdo(dbc, 'CREATE TABLE [World] ({})'.format(tablespec), VERBOSE)
+    dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
+    dbdo(dbc, 'BEGIN', VERBOSE)
+    dbdo(dbc, 'CREATE TABLE [World.temp] ({})'.format(tablespec), VERBOSE)
     dates = list_from_query(dbc, 'select distinct(Date) from [jhu_git] order by date')
     for date in dates:
-        world = [ 0, 0, 0, 0, 0.0, 0.0]
+        world = [0, 0, 0, 0]
         for country in countries:
             row = row_from_query(
                 dbc, 
@@ -430,14 +464,25 @@ def make_summary_tables():
                     if row[idx] is not None:
                         world[idx-1] += row[idx]
                 
-                world[4] = 100 * float(world[1] / world[0]) # CFR
-                world[5] = 100 * float(world[2] / world[0]) # CRR
         world_str = ', '.join(['{}'.format(w) for w in world])
         
         #print (country, world, world_str)
         dbdo(dbc,
-                ('INSERT into [World] (Date, confirmed, deaths, Recovered, Active, CFR, CRR) '
+                ('INSERT into [World.temp] (Date, confirmed, deaths, Recovered, Active) '
                  'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
+    dbdo(dbc, 
+         ('CREATE TABLE [World] AS '
+          '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+          '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
+          '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
+          '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
+          '   ROUND(Cast(Deaths    as REAL)/(LAG (Deaths,    1, 0) OVER (order by date))-1, {R}) as D1day, '
+          '   ROUND(Cast(Recovered as REAL)/(LAG (Recovered, 1, 0) OVER (order by date))-1, {R}) as R1day, '
+          '   ROUND(CAGR(Confirmed, LAG (Confirmed, 7, 0) OVER (order by date), 7), {R}) as C7day, '
+          '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
+          '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
+          '  FROM [World.temp] order by date').format(R = rounding), 
+         VERBOSE)
 
     dbdo(dbc, 'COMMIT', VERBOSE)
     
@@ -476,6 +521,7 @@ if __name__ == '__main__':
             UPDATE = 1
     
     db_connect = sqlite3.connect('ncorv2019.sqlite')
+    db_connect.create_function('CAGR', 3, cagr)
     dbc = db_connect.cursor()
 
     main()
