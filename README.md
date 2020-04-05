@@ -1,3 +1,11 @@
+# COVID 19 Data tracker and plotter
+
+This will produce images like below:
+
+![Confirmed Cases since reporting started](./plots/Confirmed_since_start.png)
+
+
+
 # 2020 SARs-Cov / COVID 19
 Some analysis on the COVID 19 /  Corona Virus outbreak of early 2020.
 
