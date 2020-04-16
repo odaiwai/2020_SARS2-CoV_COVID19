@@ -49,6 +49,10 @@ push @plots, "South Korea";
 push @plots, "Confirmed_since_start";
 push @plots, "Recovered_since_start";
 push @plots, "Deaths_since_start";
+push @plots, "Confirmed_new_since_start";
+push @plots, "Recovered_new_since_start";
+push @plots, "Deaths_new_since_start";
+
 
 for my $plot (@plots) {
 	my $result = `cp "./plots/$plot.png" /var/www/www.diaspoir.net/html/health/COVID19/`;

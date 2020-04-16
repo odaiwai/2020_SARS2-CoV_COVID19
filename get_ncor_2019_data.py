@@ -56,13 +56,22 @@ def make_tables():
                     'curedCount Integer'),
         'jhu_git': ('Timestamp Integer, Date Text, '
                     'FIPS Integer, Admin2 Text, Country Text, Province Text, '
-                    'Last_Update Text, '
+                    'Last_Update Text, incident_rate Real, People_tested Integer, People_hospitalized Integer, '
                     'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
                     'Latitude Real, Longitude Real, Combined_Key Text'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
                    'ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, '
                    'ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, '
                    'ADM0_PCODE Text'),
+        'un_places': ('id Integer Unique Primary Key, hrinfo_id Integer, fts_api_id Integer, '
+                      'reliefweb_id Integer, m49 Integer, admin_level Integer, dgacm_list Text, '
+                      'lat Real, long Real, iso2 Text, iso3 Text, arabic_short Text, '
+                      'chinese_short Text, french_short Text, Default_form Text, fts Text, '
+                      'russian_short Text, spanish_short Text'),
+        'populations': ('id Integer Unique Primary Key, Country Text, alt_name text, Population Integer, '
+                        'Yearly_Change Real, Net_Change Integer, Density Real, Land_Area Integer, '
+                        'Migrants Integer, Fert_rate Real, median_age Integer, Urban_pct Real, '
+                        'world_pct Real'),
         'files': ('filename Text, dateProcessed Text')
             }
     make_tables_from_dict(dbc, tabledefs, VERBOSE)
@@ -133,6 +142,112 @@ def read_hksarg_pr():
     
     dbdo(dbc, 'COMMIT', VERBOSE)
     return None 
+
+def quoted_if_required(string):
+    if type(string) == str:
+        return '"{}"'.format(string)
+    elif string is None:
+        return '""'
+    else:
+        return '{}'.format(string)
+
+def normalise_countries(country):
+    # There's been a bit of inconsistency with naming of countries
+    # Make a dict to keep things consistent.
+    # On March 10th, the naming has started to get a bit political
+    normalise_countries ={'Republic of Ireland': 'Ireland', # Now that the UK has had such a bad response
+                          'North Ireland': 'United Kingdom',# they can own the north too.
+                          ' Azerbaijan': 'Azerbaijan', # Spurious Spacing issue
+                          'US': 'USA',
+                          'UK': 'United Kingdom',
+                          'Mainland China': 'China', 
+                          'Hong Kong SAR': 'Hong Kong', # stick with initial usage
+                          'Macao SAR': 'Macau',         # Stick with initial usage
+                          'Taipei and environs': 'Taiwan', # Taiwan, just Taiwan 
+                          'Taiwan*': 'Taiwan',          # Taiwan 
+                          'occupied Palestinian territory': 'Palestine', # Pointless change
+                          'West Bank and Gaza': 'Palestine', # Pointless change
+                          'Russian Federation': 'Russia', # Pointless change
+                          'The Bahamas': 'Bahamas', # Pointless change
+                          'Czech Republic': 'Czechia',
+                          'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
+                          'Holy See': 'Vatican City',
+                          'Viet Nam': 'Vietnam',
+                          'Korea_South': 'South Korea',
+                          'Cote d\'Ivoire': 'Ivory Coast'
+                          }
+    if country in normalise_countries.keys():
+        return normalise_countries[country]
+    else:
+        return country
+
+def read_populations():
+    """Read in the list of places from the UN list and fix it.
+    """
+    with open('./01_download_data/world_population.csv', 'r') as infile:
+        lines = list(infile)
+        fields = ('id, Country, Population, Yearly_Change, Net_Change , Density, '
+                  'Land_Area, Migrants, Fert_rate, median_age, Urban_pct, '
+                  'world_pct, alt_name')
+        # first line is fieldnames
+        fixcomma = re.compile(r'([0-9]),([0-9])')
+        descriptions = lines.pop(0)
+        print (descriptions)
+        dbdo(dbc, 'BEGIN', VERBOSE)
+        for line in lines:
+            values = line.rstrip('\n').split(';')
+            print(values)
+            country = values[1]
+            alt_name = normalise_countries(country)
+            print(alt_name)
+            values.append(alt_name)
+            
+            value_list = []
+            print(values)
+            for value in values:
+                value = fixcomma.sub(r'\1\2', value)
+                print (value, type(value))
+                if value[-1:] == '%':
+                    value = value[0:-2]
+                
+                    
+                value_list.append(quoted_if_required(value))
+            values = ', '.join(value_list)
+            dbdo(dbc,'INSERT INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+
+        dbdo(dbc, 'COMMIT', VERBOSE)
+    return None
+
+
+def read_un_places():
+    """Read in the list of places from the UN list and fix it.
+    """
+    with open('./countries.json', 'r') as infile:
+        un_countries = json.loads(infile.read())
+        fields = ('id, hrinfo_id, fts_api_id, reliefweb_id, m49, admin_level, dgacm_list, '
+                  'iso2, iso3, lat, long, arabic_short, chinese_short, french_short, '
+                  'default_form, fts, russian_short, spanish_short')
+        dbdo(dbc, 'BEGIN', VERBOSE)
+        for entity in un_countries['data']:
+            value_list = []
+            for object in ['id', 'hrinfo_id', 'fts_api_id', 'reliefweb_id', 'm49', 'admin_level', 'dgacm-list', 'iso2', 'iso3']:
+                value_list.append(quoted_if_required(entity[object]))
+                
+            # Add the gelocation data
+            geo = entity['geolocation']
+            value_list.append(quoted_if_required(geo['lat']))
+            value_list.append(quoted_if_required(geo['lon']))
+            
+            # Add the Label Data
+            labels = entity['label']
+            for label in ['arabic-short', 'chinese-short', 'french-short', 'default', 'fts', 'russian-short', 'spanish-short']:
+                value_list.append(quoted_if_required(labels[label]))
+            
+            values = ', '.join(value_list)
+            dbdo(dbc,'INSERT INTO [un_places] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+
+        dbdo(dbc, 'COMMIT', VERBOSE)
+    return None
 
 def read_china_places():
     """
@@ -232,6 +347,7 @@ def read_3g_dxy_cn_json():
 
     return None
 
+       
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
     already_processed = list_from_query(dbc, 'select filename from files;') 
@@ -247,30 +363,7 @@ def read_jhu_data():
     fixcckey = re.compile(r'"([A-Za-z. ]+?),\s*([A-Za-z. ]+?),\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
-    # There's been a bit of inconsistency with naming of countries
-    # Make a dict to keep things consistent.
-    # On March 10th, the naming has started to get a bit political
-    normalise_countries ={'Republic of Ireland': 'Ireland', # Now that the UK has had such a bad response
-                          'North Ireland': 'United Kingdom',# they can own the north too.
-                          ' Azerbaijan': 'Azerbaijan', # Spurious Spacing issue
-                          'US': 'USA',
-                          'UK': 'United Kingdom',
-                          'Mainland China': 'China', 
-                          'Hong Kong SAR': 'Hong Kong', # stick with initial usage
-                          'Macao SAR': 'Macau',         # Stick with initial usage
-                          'Taipei and environs': 'Taiwan', # Taiwan, just Taiwan 
-                          'Taiwan*': 'Taiwan',          # Taiwan 
-                          'occupied Palestinian territory': 'Palestine', # Pointless change
-                          'West Bank and Gaza': 'Palestine', # Pointless change
-                          'Russian Federation': 'Russia', # Pointless change
-                          'The Bahamas': 'Bahamas', # Pointless change
-                          'Czech Republic': 'Czechia',
-                          'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
-                          'Holy See': 'Vatican City',
-                          'Viet Nam': 'Vietnam',
-                          'Korea_South': 'South Korea',
-                          'Cote d\'Ivoire': 'Ivory Coast'
-                          }
+    # Keep the field names consistent
     normalise_fields ={'Country_Region': 'Country',
                        'Province_State': 'Province',
                        'Lat': 'Latitude',
@@ -319,9 +412,7 @@ def read_jhu_data():
                     print (line_dict)
                     
                     # Normalise some of the inputs
-                    for normalise in normalise_countries.keys():
-                        if line_dict['Country'] == normalise:
-                            line_dict['Country'] = normalise_countries[normalise]
+                    line_dict['Country'] = normalise_countries(line_dict['Country'])
 
                     if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
                             line_dict['Country'] = 'Hong Kong'
@@ -497,6 +588,8 @@ def main():
         make_tables()
         read_hksarg_pr()
         read_china_places()
+        read_un_places()
+        read_populations()
 
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
@@ -507,7 +600,7 @@ def main():
 
 if __name__ == '__main__':
     #Some Generics
-    VERBOSE = 0
+    VERBOSE = 1
     FIRSTRUN = 0
     UPDATE = 0
     
