@@ -106,8 +106,8 @@ def graph_definitions():
     graphs.append(['Confirmed', 10, 'Confirmed New Cases (includes Deaths, Recoveries)', 'log', 2, 7, 0])
     graphs.append(['Recovered', 10, 'Recoveries', 'log', 2, 0, 1])
     graphs.append(['Recovered', 10, 'New Recoveries', 'log', 2, 7, 0])
-    graphs.append(['Deaths', 3, 'Deaths', 'log', 2, 0, 1])
-    graphs.append(['Deaths', 3, 'New Deaths', 'log', 2, 7, 0])
+    graphs.append(['Deaths', 1, 'Deaths', 'log', 2, 0, 1])
+    graphs.append(['Deaths', 1, 'New Deaths', 'log', 2, 7, 0])
     
     return graphs
 def make_days_since_start_plot():
@@ -147,8 +147,8 @@ def make_days_since_start_plot():
         ax.set(xlabel='Days since {} {}'.format(limit, graph), xlim = axis_range, ylabel=description)
         fig.autofmt_xdate()
         # configure the Y-Axis
-        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.set_yscale(scale, basey = base)
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.set(ylim = (limit, max_cases))
         
         for country in countries:
@@ -181,15 +181,15 @@ def make_days_since_start_plot():
             axis_limit = 2 ** int(math.log2(max_cases)-1)
             for ddays in [1,2,3,4,5,7,14,21]:
                 rate = ((2/1) ** (1/ddays))-1
-                days = [1]
+                days = [0]
                 double = [limit]
-                for day in range(1, max_days):
+                for day in range(0, max_days):
                     days.append(day)
                     double.append(double[-1] * (1 + rate))
                     if double[-1] >= axis_limit:
                         break
-                ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 6)
-                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 7)
+                ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
+                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 2)
         
         # Attribution on the canvas
         fig.text(0.5, 0.025, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
@@ -346,7 +346,6 @@ def make_days_since_start_plot_by_country():
     colours = {'Confirmed': 'orange', 'Deaths': 'black', 'Recovered': 'green'}
     
     for country in countries:
-        print (country)
         fig = plt.figure(figsize=FIGSIZE)
         ax = plt.axes([0.1, 0.15, 0.85, 0.75])
         fig.suptitle('SARS2-CoV / COVID 19 for Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
@@ -354,31 +353,41 @@ def make_days_since_start_plot_by_country():
         ax.set(xlabel='Days since reporting Started', xlim = axis_range, ylabel='Cases')
         fig.autofmt_xdate()
         # configure the Y-Axis
-        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.set_yscale('log', basey = 2)
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         #max_cases = 0
         zord = 10 #
+        print (country)
         for graph, limit, description, scale, base, lag, doubling in graphs:
             col = colours[graph]
+            # we want to have dates in here...
             if lag > 0:
-                cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
+                cmd = ('SELECT Date, ROW_NUMBER() OVER (PARTITION BY Confirmed >= 10 order by date) as days, '
                        'cast({G} - LAG ({G}, {D}, 0) OVER (order by date) as REAL)/{D} as {G} '
-                       'from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit, D=lag))
+                       'from [{C}] where Confirmed >= 10 order by Date'.format(C = country, G=graph, L = limit, D=lag))
             else:
-                cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
-                       '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit))
-            results = dict_from_query(dbc, cmd)
-            days, cases = keys_values_as_lists_from_dict(results)
-            #print (results)
+                cmd = ('SELECT Date, ROW_NUMBER() OVER (PARTITION BY Confirmed >= 10 order by date) as days, '
+                       '{G} from [{C}] where Confirmed >= 10 order by Date'.format(C = country, G=graph, L = limit))
+            results = rows_from_query(dbc, cmd) # 3 x n
             
-            # Add a marker and optionly an annotation for the last point
-            label = '{} cases since no. {}'.format(graph, limit)
-            style = 'solid'
-            if lag > 0:
-                label = '{} new cases per day (over {} day) since no. {}'.format(graph, lag, limit)
-                style = 'dashed'
-                
-            if len(days) > 0:
+            if len(results) > 0:
+                dates = []
+                days = []
+                cases = []
+                for result in results:
+                    dates.append(result[0])
+                    days.append(result[1])
+                    cases.append(result[2])
+        
+                #print (graph, results)
+                #print (graph, '\n\t', dates, '\n\t', days, '\n\t', cases)
+                # Add a marker and optionly an annotation for the last point
+                label = '{} cases since no. {} ({})'.format(graph, limit, dates[0])
+                style = 'solid'
+                if lag > 0:
+                    label = '{} new cases per day (over {} day) since no. {} ({})'.format(graph, lag, limit, dates[0])
+                    style = 'dashed'
+                        
                 final_note = '{:,.0f}'.format(cases[-1])
                 if lag > 0:
                     final_note = '{:,.0f} per day'.format(cases[-1])
@@ -395,15 +404,15 @@ def make_days_since_start_plot_by_country():
         axis_limit = 2 ** int(math.log2(max_cases)-1)
         for ddays in [1,2,3,4,5,7,14]:
             rate = ((2/1) ** (1/ddays))-1
-            days = [1]
-            double = [limit]
-            for day in range(1, max_days):
+            days = [0]
+            double = [1]
+            for day in range(0, max_days):
                 days.append(day)
                 double.append(double[-1] * (1 + rate))
                 if double[-1] >= axis_limit:
                     break
-            ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 4)
-            ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 7)
+            ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
+            ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 2)
         
         # Attribution on the canvas
         ax.legend()
@@ -420,9 +429,9 @@ def main():
     Go through the download dir and collect all of the various data sources:
     """
     #make_plots_from_dxy()
-    #make_country_plots_from_jhu()
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
+    #make_country_plots_from_jhu()
 
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
