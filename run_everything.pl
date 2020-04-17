@@ -55,8 +55,12 @@ push @plots, "Deaths_new_since_start";
 
 
 for my $plot (@plots) {
-	my $result = `cp "./plots/$plot.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
-	my $result = `cp "./plots/$plot\_since_start.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
+	if ( -e "./plots/$plot.png" ) {
+		my $result = `cp "./plots/$plot.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
+	}
+	if ( -e "./plots/$plot\_new_since_start.png" ) {
+		my $result = `cp "./plots/$plot\_since_start.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
+	}
 }
 
 ## end
