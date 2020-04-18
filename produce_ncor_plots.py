@@ -428,11 +428,11 @@ def main():
     """
     Go through the download dir and collect all of the various data sources:
     """
-    #make_plots_from_dxy()
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
     #make_country_plots_from_jhu()
-
+    make_plots_from_dxy()
+    
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
     return 0
