@@ -13,6 +13,7 @@ use warnings;
 use utf8;
 
 my $verbose = 0;
+my $getters = 1;
 my $options = "silent";
 my $logfile = "ncorplots.log";
 
@@ -26,17 +27,19 @@ my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh
 while (my $arg = shift(@ARGV)) {
 	if ( $arg =~ /verbose/ ) { $verbose = 1; }
 	if ( $arg =~ /silent/ )  { $verbose = 0; }
+	if ( $arg =~ /get/ )  { $getters = 1 - $getters; }
 }
 if ( $verbose ) {
 	$options = "verbose";
 }
 
 # run all the getters
-run_all_scripts(@getters);
-
-# Run the JHU file separately as it requires a parameter
-`./get_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
-`./produce_ncor_plots.py >>$logfile.log 2>&1`;
+if ( $getters) {
+	run_all_scripts(@getters);
+	# Run the JHU file separately as it requires a parameter
+	`./get_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
+	`./produce_ncor_plots.py >>$logfile.log 2>&1`;
+}
 
 #run_all_scripts(@parsers);
 
@@ -53,13 +56,16 @@ push @plots, "Confirmed_new_since_start";
 push @plots, "Recovered_new_since_start";
 push @plots, "Deaths_new_since_start";
 
+my @variants = qw/.png _since_start.png/;
 
 for my $plot (@plots) {
-	if ( -e "./plots/$plot.png" ) {
-		my $result = `cp "./plots/$plot.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
-	}
-	if ( -e "./plots/$plot\_new_since_start.png" ) {
-		my $result = `cp "./plots/$plot\_since_start.png" /var/www/www.diaspoir.net/html/health/COVID19/`;
+	foreach my $variant (@variants) {
+		my $filename = "plots/$plot$variant";
+		if ( -f $filename ) {
+			my $size = ( -s $filename );
+			print "$plot$variant exists: $size bytes\n" if $verbose;
+			my $result = `cp "$filename" /var/www/www.diaspoir.net/html/health/COVID19/`;
+		}
 	}
 }
 
