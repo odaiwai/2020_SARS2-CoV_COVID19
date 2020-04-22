@@ -509,6 +509,7 @@ def make_summary_tables():
               '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
               '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
               '  FROM [{C}.temp] order by date').format(C=country, R = rounding), VERBOSE)
+        dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         for province in provinces:
             dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
             dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
@@ -532,7 +533,8 @@ def make_summary_tables():
                   '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
                   '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
                   '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
-
+            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
+        
         dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
@@ -574,7 +576,8 @@ def make_summary_tables():
           '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
           '  FROM [World.temp] order by date').format(R = rounding), 
          VERBOSE)
-
+    dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
+    
     dbdo(dbc, 'COMMIT', VERBOSE)
     
     return 0
