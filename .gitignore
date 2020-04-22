@@ -22,3 +22,4 @@ model.csv
 china_admin_boundaries.qgz
 query.sql
 chn_admbnda_adm2_ocha
+._*.py
