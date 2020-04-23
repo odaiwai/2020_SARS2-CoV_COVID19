@@ -19,9 +19,6 @@ my $logfile = "ncorplots.log";
 
 `date > $logfile`;
 
-my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh
-				 get_press_releases.pl get_disease_outbreak_news.pl 
-				 get_hgis_data.sh /;
 #my @parsers = qw/process_ncor_2019_data.py/;
 
 while (my $arg = shift(@ARGV)) {
@@ -35,6 +32,10 @@ if ( $verbose ) {
 
 # run all the getters
 if ( $getters) {
+	my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
+					get_press_releases.pl get_disease_outbreak_news.pl 
+					get_hgis_data.sh /;
+	
 	run_all_scripts(@getters);
 	# Run the JHU file separately as it requires a parameter
 	`./get_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
