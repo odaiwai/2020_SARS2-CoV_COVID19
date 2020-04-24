@@ -55,7 +55,7 @@ def make_tables():
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
                     'curedCount Integer'),
         'jhu_git': ('Timestamp Integer, Date Text, '
-                    'FIPS Integer, Admin2 Text, Country Text, Province Text, '
+                    'FIPS Integer, Admin2 Text, Country Text, Province Text, ' # Admin2 is county or city
                     'Last_Update Text, incident_rate Real, People_tested Integer, People_hospitalized Integer, '
                     'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
                     'Latitude Real, Longitude Real, Combined_Key Text'),
@@ -380,7 +380,7 @@ def read_jhu_data():
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
     ymd_date  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    city_state = re.compile(r'^"(.*?);\s*(.*?)"') # replaces '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    city_state = re.compile(r'^"(.*?);\s*(.*?)"') # split '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
     fixcckey = re.compile(r'"([A-Za-z. ]+?);\s*([A-Za-z. ]+?);\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
@@ -428,13 +428,31 @@ def read_jhu_data():
                     # The Combined Keys are "County, State, USA": swap out the commas with underscores
                     #line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
                     print (line)
+                    
+                    # Put all of the fields into a dict
+                    print (line)
+                    line_data = line.split(',')
+                    line_dict = {}
+                    for key, value in zip(nfields, line_data):
+                        line_dict[key] = value
+                    print (line_dict)
+                    
+                    # Normalise some of the inputs: Countries
+                    line_dict['Country'] = normalise_countries(line_dict['Country'])
+                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
+                            line_dict['Country'] = 'Hong Kong'
+                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Macau':
+                            line_dict['Country'] = 'Macau'
+                            
                     # Earlier in the data, American Provinces were "City, ST": swap out the commas with underscores
                     # We should Fix this to have Proper State names prior to 26 Feb
-                    """match = city_state.match(line)
+                    match = city_state.match(line_dict['Province'])
                     if match:
                         print ('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
                         admin2 = match[1]
                         admin1 = match[2]
+                        # Sometimes there's something like: 'Omaha, NE (From Diamond Princess)' (case from cruise ship)
+                        # we shoud add the 'from ...' to the Admin2?  Or maybe to a comment field?
                         from_cruise = cruise.match(admin1)
                         if from_cruise:
                             #print ('match:{}; admin1:{}; admin2:{}.'.format(from_cruise[0], from_cruise[1], from_cruise[2]))
@@ -445,26 +463,9 @@ def read_jhu_data():
                         is_state = az2.match(line)
                         if is_state:
                             admin1 = admin1_from_abbr(admin1)
-                        line = city_state.sub(r'{},{}'.format(admin2, admin1), line.rstrip())
-                    else:
-                        # delete the Admin2 fields if they're there
-                        #Add a null value for admin2
-                        line = '-,{}'.format(line)
-                    """
-                    print (line)
-                    line_data = line.split(',')
-                    line_dict = {}
-                    for key, value in zip(nfields, line_data):
-                        line_dict[key] = value
-                    print (line_dict)
-                    
-                    # Normalise some of the inputs
-                    line_dict['Country'] = normalise_countries(line_dict['Country'])
-
-                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
-                            line_dict['Country'] = 'Hong Kong'
-                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Macau':
-                            line_dict['Country'] = 'Macau'
+                        line_dict['Admin2'] = admin2
+                        line_dict['Province'] = admin1
+                                        
                     # Date of last update:
                     # check which form the date is in: There's a MDY format and there's a proper ISO
                     update   = line_dict['Last_Update']
