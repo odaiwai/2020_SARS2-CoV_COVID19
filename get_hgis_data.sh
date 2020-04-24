@@ -7,7 +7,7 @@ DATE=`date "+%Y-%m-%d %H:%M:%S"`
 # -N stops the creation of .1, etc
 wget -q -N http://hgis.uw.edu/virus/assets/virus.csv 1>> ../HGIS_data.log 2>&1
 git add virus.csv
-git commit -m "Added HGIS data on $DATE" 1>> ../HGIS_data.log 2>&1
+git commit -m "Added HGIS data on $DATE" HGIS_UW_data/virus.csv 1>> ../HGIS_data.log 2>&1
 
 
 
