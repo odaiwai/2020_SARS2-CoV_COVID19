@@ -173,13 +173,36 @@ def normalise_countries(country):
                           'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
                           'Holy See': 'Vatican City',
                           'Viet Nam': 'Vietnam',
-                          'Korea_South': 'South Korea',
+                          'Korea, South': 'South Korea',
                           'Cote d\'Ivoire': 'Ivory Coast'
                           }
     if country in normalise_countries.keys():
         return normalise_countries[country]
     else:
         return country
+
+def admin1_from_abbr(abbr):
+    """ Return the State Name given the abbrevation as defined in ISO 3166-2"""
+    # Extended for Canada
+    states_dict = {'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 
+                   'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 
+                   'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 
+                   'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 
+                   'ME': 'Maine', 'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 
+                   'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 
+                   'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York', 
+                   'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 
+                   'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina', 
+                   'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 
+                   'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 
+                   'WY': 'Wyoming', 'DC': 'District of Columbia', 'AS': 'American Samoa', 'GU': 'Guam', 
+                   'MP': 'Northern Mariana Islands', 'PR': 'Puerto Rico', 'UM': 'United States Minor Outlying Islands', 
+                   'VI': 'Virgin Islands, U.S.',
+                   'NL': 'Newfoundland and Labrador', 'PE': 'Prince Edward Island', 'NS': 'Nova Scotia',
+                   'NB': 'New Brunswick', 'QC': 'Quebec', 'ON': 'Ontario', 'MB': 'Manitoba', 'SK': 'Saskatchewan', 
+                   'AB': 'Alberta', 'BC': 'British Columbia', 'YT': 'Yukon', 'NT': 'Northwest Territories',
+                   'NU': 'Nunavut'}
+    return states_dict[abbr]
 
 def read_populations():
     """Read in the list of places from the UN list and fix it.
@@ -217,7 +240,6 @@ def read_populations():
 
         dbdo(dbc, 'COMMIT', VERBOSE)
     return None
-
 
 def read_un_places():
     """Read in the list of places from the UN list and fix it.
@@ -347,7 +369,6 @@ def read_3g_dxy_cn_json():
 
     return None
 
-       
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
     already_processed = list_from_query(dbc, 'select filename from files;') 
@@ -357,12 +378,14 @@ def read_jhu_data():
     print ('Reading JHU CSSE data')
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
-    yankdate = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
-    altdate  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    fixstate = re.compile(r'"(.*?),\s*(.*?)"') # replaces '"Tempe, AZ", a, b, c' with 'Tempe_AZ, a, b, c'
-    fixcckey = re.compile(r'"([A-Za-z. ]+?),\s*([A-Za-z. ]+?),\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
+    mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
+    ymd_date  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
+    city_state = re.compile(r'^"(.*?);\s*(.*?)"') # replaces '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    fixcckey = re.compile(r'"([A-Za-z. ]+?);\s*([A-Za-z. ]+?);\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
+    cruise = re.compile(r'^([A-Z][A-Z])\s+(\(.*\))$')
+    az2 = re.compile(r'^([A-Z][A-Z])$')
     # Keep the field names consistent
     normalise_fields ={'Country_Region': 'Country',
                        'Province_State': 'Province',
@@ -386,24 +409,48 @@ def read_jhu_data():
                 fields = ['timestamp', 'date']
                 line_fields = line.rstrip().split(r',')
                 # normalise the fields
-                nfields = []
+                nfields = []#'admin2']
                 for field in line_fields:
                     if field in normalise_fields.keys():
                         nfields.append(normalise_fields[field])
                     else:
                         nfields.append(field)
                 
-                # The fields can change (23 March 2020), so need to have a more robust way of
-                # handling them
+                # The fields can change (23 March 2020), so need to have a more robust way of handling them
                 fields.extend(nfields)
-                print (line_fields, fields)
+                print (line_fields, '\n', fields)
 
                 for line in lines:
                     print (line)
-                    # American Provinces are "City, State" because Yanks, so that needs to be fixed
-                    line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
+                    # remove commas between double quotes - replace with ; 
+                    line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', ';', line)
+                    line = re.sub('"', '', line)
+                    # The Combined Keys are "County, State, USA": swap out the commas with underscores
+                    #line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
                     print (line)
-                    line = fixstate.sub(r'\1_\2', line.rstrip())
+                    # Earlier in the data, American Provinces were "City, ST": swap out the commas with underscores
+                    # We should Fix this to have Proper State names prior to 26 Feb
+                    """match = city_state.match(line)
+                    if match:
+                        print ('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
+                        admin2 = match[1]
+                        admin1 = match[2]
+                        from_cruise = cruise.match(admin1)
+                        if from_cruise:
+                            #print ('match:{}; admin1:{}; admin2:{}.'.format(from_cruise[0], from_cruise[1], from_cruise[2]))
+                            admin1 = from_cruise[1]
+                            admin2 += from_cruise[2]
+                        # Test for 'Calgary, Alberta' or test for [A-Z]{2}?
+                        print (admin1, admin2)
+                        is_state = az2.match(line)
+                        if is_state:
+                            admin1 = admin1_from_abbr(admin1)
+                        line = city_state.sub(r'{},{}'.format(admin2, admin1), line.rstrip())
+                    else:
+                        # delete the Admin2 fields if they're there
+                        #Add a null value for admin2
+                        line = '-,{}'.format(line)
+                    """
                     print (line)
                     line_data = line.split(',')
                     line_dict = {}
@@ -422,7 +469,7 @@ def read_jhu_data():
                     # check which form the date is in: There's a MDY format and there's a proper ISO
                     update   = line_dict['Last_Update']
                     last_update = 'NULL' # So we can catch it if it falls 
-                    match = yankdate.match(update)
+                    match = mdy_date.match(update)
                     if match:
                         #print(match)
                         year = int(match[3])
@@ -430,7 +477,7 @@ def read_jhu_data():
                             year = 2000 + year
                         last_update = datetime.datetime(year, int(match[1]), int(match[2]), int(match[4]), int(match[5]), 0)
                     else:
-                        match = altdate.match(update)
+                        match = ymd_date.match(update)
                         if match:
                             print (match)
                             last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), int(match[6]))
@@ -605,7 +652,7 @@ if __name__ == '__main__':
     #Some Generics
     VERBOSE = 1
     FIRSTRUN = 0
-    UPDATE = 0
+    UPDATE = 1 # Otherwise this does nothing!
     
     DATADIR = '01_download_data'
     for arg in sys.argv:

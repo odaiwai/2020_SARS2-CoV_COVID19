@@ -331,10 +331,11 @@ def make_days_since_start_plot_by_country():
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
-    start_date = datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M')
-    final_date = datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')
+    start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
+    final_date = datetime.datetime.strptime(final_date_str, '%Y-%m-%d') 
     max_days = (final_date - start_date).days
     axis_range = [1, max_days+7]
+    #axis_range = [start_date, final_date]
     countries = list_of_countries_by_confirmed(final_date_str)
     countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia', 'Macau', 'World', 'Philippines', 'Turkey', 'Iran', 'Switzerland']
     
@@ -396,9 +397,9 @@ def make_days_since_start_plot_by_country():
                         linestyle = style, label = label)
                 ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, zorder = zord)
                 # Add a label
-                ax.annotate(final_note, (days[-1]+1, cases[-1]), 
+                ax.annotate(final_note, (days[-1], cases[-1]), 
                             fontsize = 8, ha='left', bbox = box, zorder = zord)
-
+        
         # add dashed lines for 'doubles every (1..7) days
         ax.set(ylim = (1, max_cases))
         axis_limit = 2 ** int(math.log2(max_cases)-1)
@@ -431,7 +432,7 @@ def main():
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
     #make_country_plots_from_jhu()
-    make_plots_from_dxy()
+    #make_plots_from_dxy()
     
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
