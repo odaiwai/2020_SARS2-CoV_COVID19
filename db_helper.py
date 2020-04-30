@@ -2,9 +2,9 @@
 """
     Database helper functions.
     Needs sqlite3
-
+    FIXME: This should probably help with parameterising the inputs, but mostly it's working with 
+    clean inputs, so there's not much chance of meeting "Little Bobby Tables; Drop Table Users;" or similar 
 """
-
 
 def dbdo(dbc, cmd, verbose):
     """
@@ -16,6 +16,14 @@ def dbdo(dbc, cmd, verbose):
     result = dbc.execute(cmd)
     return result
 
+def delete_named_tables(dbc, pattern, VERBOSE):
+    tables_to_delete = list_from_query(dbc, 'SELECT name from sqlite_master where name like "{}"'.format(pattern))
+    dbdo(dbc, 'BEGIN', VERBOSE)
+    for table_name in tables_to_delete:
+        dbdo(dbc, 'DROP TABLE [{}]'.format(table_name), VERBOSE)
+    dbdo(dbc, 'COMMIT', VERBOSE)
+
+    return len(tables_to_delete)
 
 def list_from_query(dbc, query_str):
     """
