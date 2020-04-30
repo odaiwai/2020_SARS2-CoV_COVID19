@@ -54,11 +54,11 @@ def make_tables():
                     'currentConfirmedCount Integer, suspectedCount Integer, '
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
                     'curedCount Integer'),
-        'jhu_git': ('Timestamp Integer, Date Text, '
+        'jhu_data': ('Timestamp Integer, Date Text, '
                     'FIPS Integer, Admin2 Text, Country Text, Province Text, ' # Admin2 is county or city
                     'Last_Update Text, incident_rate Real, People_tested Integer, People_hospitalized Integer, '
                     'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
-                    'Latitude Real, Longitude Real, Combined_Key Text'),
+                    'Latitude Real, Longitude Real, Combined_Key Text, comment Text'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
                    'ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, '
                    'ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, '
@@ -72,7 +72,7 @@ def make_tables():
                         'Yearly_Change Real, Net_Change Integer, Density Real, Land_Area Integer, '
                         'Migrants Integer, Fert_rate Real, median_age Integer, Urban_pct Real, '
                         'world_pct Real'),
-        'files': ('filename Text, dateProcessed Text')
+        'files': ('filename Text, Source Text, dateProcessed Text')
             }
     make_tables_from_dict(dbc, tabledefs, VERBOSE)
 
@@ -364,10 +364,21 @@ def read_3g_dxy_cn_json():
 
             # Only add to the database on success addition
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
+            dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "3GDXY", "{}")'.format(filename, now), VERBOSE)
             dbdo(dbc, 'COMMIT', VERBOSE)
 
     return None
+
+def field_types_from_schema(table):
+    lines = rows_from_query(dbc, 'PRAGMA table_info({})'.format(table))
+    field_types = {}
+    for line in lines:
+        #print (line)
+        #fields = line.split('|')
+        #print (fields)
+        field_types[line[1]] = line[2]
+    #print (field_types)
+    return field_types
 
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
@@ -380,7 +391,7 @@ def read_jhu_data():
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
     ymd_date  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    city_state = re.compile(r'^"(.*?);\s*(.*?)"') # split '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    city_state = re.compile(r'^"(.*?)#\s*(.*?)"') # split '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
     fixcckey = re.compile(r'"([A-Za-z. ]+?);\s*([A-Za-z. ]+?);\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
@@ -392,6 +403,7 @@ def read_jhu_data():
                        'Lat': 'Latitude',
                        'Long_': 'Longitude'
                           }
+    field_types = field_types_from_schema('jhu_data')
 
     for filename in files:
         match = namedate.match(filename)
@@ -406,25 +418,24 @@ def read_jhu_data():
                 # First Line - gives us the fieldnames
                 line = fixprov.sub(r'\1', lines.pop(0))
                 line = fixspcs.sub(r'_', line.rstrip())
-                fields = ['timestamp', 'date']
+                # The fields can change (23 March 2020), so need to have a more robust way of handling them
+                # This figures out the fields from the first line, and adds extra if necessary
                 line_fields = line.rstrip().split(r',')
                 # normalise the fields
-                nfields = []#'admin2']
+                norm_fields = []#'admin2']
                 for field in line_fields:
                     if field in normalise_fields.keys():
-                        nfields.append(normalise_fields[field])
+                        norm_fields.append(normalise_fields[field])
                     else:
-                        nfields.append(field)
+                        norm_fields.append(field)
                 
-                # The fields can change (23 March 2020), so need to have a more robust way of handling them
-                fields.extend(nfields)
-                print (line_fields, '\n', fields)
+                print (line_fields, '\n', norm_fields)
 
                 for line in lines:
                     print (line)
                     # remove commas between double quotes - replace with ; 
-                    line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', ';', line)
-                    line = re.sub('"', '', line)
+                    line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', '#', line)
+                    line = re.sub('"', '', line).rstrip()
                     # The Combined Keys are "County, State, USA": swap out the commas with underscores
                     #line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
                     print (line)
@@ -433,7 +444,7 @@ def read_jhu_data():
                     print (line)
                     line_data = line.split(',')
                     line_dict = {}
-                    for key, value in zip(nfields, line_data):
+                    for key, value in zip(norm_fields, line_data):
                         line_dict[key] = value
                     print (line_dict)
                     
@@ -460,7 +471,7 @@ def read_jhu_data():
                             admin2 += from_cruise[2]
                         # Test for 'Calgary, Alberta' or test for [A-Z]{2}?
                         print (admin1, admin2)
-                        is_state = az2.match(line)
+                        is_state = az2.match(admin1)
                         if is_state:
                             admin1 = admin1_from_abbr(admin1)
                         line_dict['Admin2'] = admin2
@@ -487,14 +498,22 @@ def read_jhu_data():
                         print ('BARF!', update)
                         exit()
                     
-                    # if there's empty fields, set them to zero
+                    # if there's empty fields, set them to an appropriate null value base on the type
                     for key in line_dict.keys():
                         if line_dict[key] == '':
-                            line_dict[key] = 0
+                            if field_types[key] == 'INT':
+                                line_dict[key] = 0
+                            if field_types[key] == 'REAL':
+                                line_dict[key] = 0.0
+                            if field_types[key] == 'TEXT':
+                                line_dict[key] =''
                     
                     #build up the values list
+                    fields = ['timestamp', 'date']
                     values = [timestamp, '"{}"'.format(filedate)]
+                    print ('line_dict', line_dict)
                     for key in line_dict.keys():
+                        fields.append(key)
                         if key in ['Lat, Long_']:
                             line_dict[key] = float(line_dict[key])
 
@@ -503,14 +522,14 @@ def read_jhu_data():
                         else:
                             values.append('{}'.format(line_dict[key]))
                         
-                    #print (fields, values)
-                    dbdo(dbc, 'insert into [jhu_git] ({}) Values ({});'.
+                    print ('fields, values', fields, values)
+                    dbdo(dbc, 'insert into [jhu_data] ({}) Values ({});'.
                          format(','.join(fields), 
                                 ','.join(values)), VERBOSE)
-                        
+                    #exit()
             # Only add to the database on success addition
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo(dbc, 'INSERT INTO [files] (Filename, DateProcessed) Values ("{}", "{}")'.format(filename, now), VERBOSE)
+            dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "JHU", "{}")'.format(filename, now), VERBOSE)
             dbdo(dbc, 'COMMIT', VERBOSE)
 
     return len(files)
@@ -528,14 +547,14 @@ def make_summary_tables():
                  'Deaths Integer, '
                  'Recovered Integer, '
                  'Active Integer')
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git];')
+    countries = list_from_query(dbc, 'select distinct(country) from [jhu_data];')
     rounding = 4
     for country in countries:
         dbdo(dbc, "BEGIN", VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
-        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_git] where country = \"{}\"'.format(country))
+        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\"'.format(country))
         # Make a Table of all the provinces
         country_dates = {}
         dbdo(dbc, 
@@ -543,7 +562,7 @@ def make_summary_tables():
               '  SELECT distinct(date) || \' 17:00\' AS Date, '
               '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
               '   sum(Recovered) as Recovered, sum(Active) as Active '
-              '  FROM [jhu_git] where country = \'{C}\' group by date order by date'
+              '  FROM [jhu_data] where country = \'{C}\' group by date order by date'
              ).format(C=country), VERBOSE)
         dbdo(dbc, 
              ('CREATE TABLE [{C}] AS '
@@ -558,31 +577,35 @@ def make_summary_tables():
               '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
               '  FROM [{C}.temp] order by date').format(C=country, R = rounding), VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
-        for province in provinces:
-            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
-            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
-            # Create the Provincial Tables (also need to split the ISO date into Date and Time)
-            dbdo(dbc, 
-                 ('CREATE TABLE [{C}.{P}.temp] AS '
-                  '  SELECT distinct(date) || \' 17:00\' AS Date, '
-                  '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
-                  '   sum(Recovered) as Recovered, sum(Active) as Active '
-                  '  FROM [jhu_git] where country = \'{C}\' and province = \'{P}\' group by date order by date'
-                  ).format(C=country, P=province, R = rounding), VERBOSE)
-            dbdo(dbc, 
-                 ('CREATE TABLE [{C}.{P}] AS '
-                  '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
-                  '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
-                  '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
-                  '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
-                  '   ROUND(Cast(Deaths    as REAL)/(LAG (Deaths,    1, 0) OVER (order by date))-1, {R}) as D1day, '
-                  '   ROUND(Cast(Recovered as REAL)/(LAG (Recovered, 1, 0) OVER (order by date))-1, {R}) as R1day, '
-                  '   ROUND(CAGR(Confirmed, LAG (Confirmed, 7, 0) OVER (order by date), 7), {R}) as C7day, '
-                  '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
-                  '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
-                  '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
-            dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
-        
+        # Make a Table of all the provinces, if there's more than one.
+        if len(provinces) > 1:
+            print ( country, provinces)
+            exit()
+            for province in provinces:
+                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
+                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
+                # Create the Provincial Tables (also need to split the ISO date into Date and Time)
+                dbdo(dbc, 
+                    ('CREATE TABLE [{C}.{P}.temp] AS '
+                    '  SELECT distinct(date) || \' 17:00\' AS Date, '
+                    '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
+                    '   sum(Recovered) as Recovered, sum(Active) as Active '
+                    '  FROM [jhu_data] where country = \'{C}\' and province = \'{P}\' group by date order by date'
+                    ).format(C=country, P=province, R = rounding), VERBOSE)
+                dbdo(dbc, 
+                    ('CREATE TABLE [{C}.{P}] AS '
+                    '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+                    '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
+                    '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
+                    '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
+                    '   ROUND(Cast(Deaths    as REAL)/(LAG (Deaths,    1, 0) OVER (order by date))-1, {R}) as D1day, '
+                    '   ROUND(Cast(Recovered as REAL)/(LAG (Recovered, 1, 0) OVER (order by date))-1, {R}) as R1day, '
+                    '   ROUND(CAGR(Confirmed, LAG (Confirmed, 7, 0) OVER (order by date), 7), {R}) as C7day, '
+                    '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
+                    '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
+                    '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
+                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
+            
         dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
@@ -590,7 +613,7 @@ def make_summary_tables():
     dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
     dbdo(dbc, 'BEGIN', VERBOSE)
     dbdo(dbc, 'CREATE TABLE [World.temp] ({})'.format(tablespec), VERBOSE)
-    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_git] order by date')
+    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_data] order by date')
     for date in dates:
         world = [0, 0, 0, 0]
         for country in countries:
@@ -628,7 +651,7 @@ def make_summary_tables():
     
     dbdo(dbc, 'COMMIT', VERBOSE)
     
-    return 0
+    return None
 
 def main():
     # main body
@@ -645,24 +668,31 @@ def main():
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
         read_jhu_data()
-        make_summary_tables()
+        #make_summary_tables()
 
+    if CLEANUP:
+        delete_named_tables(dbc, '%.0', VERBOSE)
+        delete_named_tables(dbc, '%.', VERBOSE)
+        
     return None
 
 if __name__ == '__main__':
     #Some Generics
     VERBOSE = 1
     FIRSTRUN = 0
+    CLEANUP = 1
     UPDATE = 1 # Otherwise this does nothing!
     
     DATADIR = '01_download_data'
     for arg in sys.argv:
         if arg == 'VERBOSE':
-            VERBOSE = 1
+            VERBOSE = 1 - VERBOSE
         if arg == 'FIRSTRUN':
             FIRSTRUN = 1
         if arg == 'UPDATE':
-            UPDATE = 1
+            UPDATE = 1 - UPDATE
+        if arg == 'CLEANUP':
+            CLEANUP = 1 - CLEANUP
     
     db_connect = sqlite3.connect('ncorv2019.sqlite')
     db_connect.create_function('CAGR', 3, cagr)
