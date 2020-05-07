@@ -78,7 +78,7 @@ def make_plots_from_dxy():
     return 0
 
 def list_of_countries_by_confirmed(final_date_str):
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_git] where date like \'{}%\';'.format(final_date_str))
+    countries = list_from_query(dbc, 'select distinct(country) from [jhu_data] where date like \'{}%\' and confirmed > 1;'.format(final_date_str))
     country_count = {}
     for country in countries:
         country_count[country] = value_from_query(dbc, 'SELECT max(confirmed) from [{}]'.format(country))
@@ -103,11 +103,11 @@ def graph_definitions():
     graphs = []
     # Contains a list of the parameters for each graph
     graphs.append(['Confirmed', 10, 'Confirmed Cases (includes Deaths, Recoveries)', 'log', 2, 0, 1])
-    graphs.append(['Confirmed', 10, 'Confirmed New Cases (includes Deaths, Recoveries)', 'log', 2, 7, 0])
+    graphs.append(['Confirmed', 10, 'Confirmed New Cases (includes Deaths, Recoveries)', 'linear', 10, 7, 0])
     graphs.append(['Recovered', 10, 'Recoveries', 'log', 2, 0, 1])
-    graphs.append(['Recovered', 10, 'New Recoveries', 'log', 2, 7, 0])
+    graphs.append(['Recovered', 10, 'New Recoveries', 'linear', 10, 7, 0])
     graphs.append(['Deaths', 1, 'Deaths', 'log', 2, 0, 1])
-    graphs.append(['Deaths', 1, 'New Deaths', 'log', 2, 7, 0])
+    graphs.append(['Deaths', 1, 'New Deaths', 'linear', 10, 7, 0])
     
     return graphs
 def make_days_since_start_plot():
@@ -122,12 +122,12 @@ def make_days_since_start_plot():
     
     # General Parameters
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
+    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
+    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M')
     final_date = datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')
     max_days = (final_date - start_date).days
-    axis_range = [1, max_days+7]
+    axis_range = [1, max_days+7] # x-axis
     countries = list_of_countries_by_confirmed(final_date_str)
     countries.remove('World')
     countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 'Malaysia', 'Macau', 'World', 'Philippines', 'Turkey', 'Iran', 'Switzerland']
@@ -149,8 +149,8 @@ def make_days_since_start_plot():
         # configure the Y-Axis
         ax.set_yscale(scale, basey = base)
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-        ax.set(ylim = (limit, max_cases))
-        
+        #ax.set(ylim = (limit, max_cases))
+        max_cases = 0
         for country in countries:
             zord = 500 - countries.index(country)
             
@@ -166,6 +166,9 @@ def make_days_since_start_plot():
             
             # Add a marker and optionly an annotation for the last point
             if len(days) > 0:
+                # Keep track of the largest number
+                if max(cases) > max_cases:
+                    max_cases = max(cases)
                 if country in countries_of_interest:
                     ax.plot(days, cases, lw = 2.5, zorder = zord)
                     ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, zorder = zord)
@@ -191,6 +194,7 @@ def make_days_since_start_plot():
                 ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
                 ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 2)
         
+        ax.set(ylim = (limit, max_cases))
         # Attribution on the canvas
         fig.text(0.5, 0.025, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
         # save it out
@@ -206,8 +210,8 @@ def make_world_stackplots_from_jhu():
     """ 
     Make a World Stackplot :
     """
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC  limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
+    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC  limit 1')
+    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'), 
                   datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')]
@@ -248,7 +252,7 @@ def make_country_plots_from_jhu():
     attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
     
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
+    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     countries = list_of_countries_by_confirmed(final_date_str)
     for country in countries:
         date_strs = list_from_query(dbc, 'SELECT Date from [{}] order by Date'.format(country))
@@ -329,8 +333,8 @@ def make_days_since_start_plot_by_country():
     
     # General Parameters
     max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date ASC limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_git] order by Date DESC limit 1')
+    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
+    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
     final_date = datetime.datetime.strptime(final_date_str, '%Y-%m-%d') 
     max_days = (final_date - start_date).days
@@ -431,8 +435,11 @@ def main():
     """
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
-    #make_country_plots_from_jhu()
+    make_country_plots_from_jhu()
     #make_plots_from_dxy()
+    # Other plots to make
+    #   Average new cases per N days for all countries
+    #   Average Deaths per N Days for all countries
     
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?

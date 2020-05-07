@@ -38,7 +38,7 @@ if ( $getters) {
 	
 	run_all_scripts(@getters);
 	# Run the JHU file separately as it requires a parameter
-	`./get_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
+	`./process_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
 	`./produce_ncor_plots.py >>$logfile.log 2>&1`;
 }
 

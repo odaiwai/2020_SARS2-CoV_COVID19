@@ -28,7 +28,7 @@ def make_tables():
             "curedCount":13557,
             "suspectedCount":0,
             "locationId":420000"
-        
+
         Provinces contain cities
         A City looks like this:
             "curedCount":222,
@@ -110,8 +110,8 @@ def escaped_list(list):
         match = re.match(r'^$', item)
         if match:
             escaped_list.append('0')
-       
-    #print (escaped_list)
+
+    #print(escaped_list)
     return ', '.join(escaped_list)
 
 def read_hksarg_pr():
@@ -120,7 +120,7 @@ def read_hksarg_pr():
     datesplit = re.compile(r'[/: ]')
     newline = re.compile(r'\n')
     filename = DATADIR + '/hksarg_pr.csv'
-    print (filename)
+    print(filename)
     with open(filename, 'r') as infh:
         lines = list(infh)
 
@@ -136,10 +136,10 @@ def read_hksarg_pr():
         date = datetime.datetime(int(date_list[2]), int(date_list[1]), 
                                  int(date_list[0]), int(date_list[3]), 
                                  int(date_list[4]))
-        
+
         sqlcmd = 'INSERT OR IGNORE INTO [hksarg] (Timestamp, New, Total, Cured, Remain, Stable, Serious, Critical, Confirmed, Dead) Values (\"{}\", {});'.format(date, escaped)
         dbdo(dbc, sqlcmd, VERBOSE)
-    
+
     dbdo(dbc, 'COMMIT', VERBOSE)
     return None 
 
@@ -159,6 +159,7 @@ def normalise_countries(country):
                           'North Ireland': 'United Kingdom',# they can own the north too.
                           ' Azerbaijan': 'Azerbaijan', # Spurious Spacing issue
                           'US': 'USA',
+                          'U.S.': 'USA',
                           'UK': 'United Kingdom',
                           'Mainland China': 'China', 
                           'Hong Kong SAR': 'Hong Kong', # stick with initial usage
@@ -169,11 +170,13 @@ def normalise_countries(country):
                           'West Bank and Gaza': 'Palestine', # Pointless change
                           'Russian Federation': 'Russia', # Pointless change
                           'The Bahamas': 'Bahamas', # Pointless change
+                          'Bahamas# The': 'Bahamas', # Pointless change
                           'Czech Republic': 'Czechia',
                           'Iran (Islamic Republic of)': 'Iran',# Are there multiple Irans?
                           'Holy See': 'Vatican City',
                           'Viet Nam': 'Vietnam',
-                          'Korea, South': 'South Korea',
+                          'Korea# South': 'South Korea',
+                          'Gambia# The': 'The Gambia',
                           'Cote d\'Ivoire': 'Ivory Coast'
                           }
     if country in normalise_countries.keys():
@@ -215,7 +218,7 @@ def read_populations():
         # first line is fieldnames
         fixcomma = re.compile(r'([0-9]),([0-9])')
         descriptions = lines.pop(0)
-        print (descriptions)
+        print(descriptions)
         dbdo(dbc, 'BEGIN', VERBOSE)
         for line in lines:
             values = line.rstrip('\n').split(';')
@@ -224,16 +227,16 @@ def read_populations():
             alt_name = normalise_countries(country)
             print(alt_name)
             values.append(alt_name)
-            
+
             value_list = []
             print(values)
             for value in values:
                 value = fixcomma.sub(r'\1\2', value)
-                print (value, type(value))
+                print(value, type(value))
                 if value[-1:] == '%':
                     value = value[0:-2]
-                
-                    
+
+
                 value_list.append(quoted_if_required(value))
             values = ', '.join(value_list)
             dbdo(dbc,'INSERT INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
@@ -254,17 +257,17 @@ def read_un_places():
             value_list = []
             for object in ['id', 'hrinfo_id', 'fts_api_id', 'reliefweb_id', 'm49', 'admin_level', 'dgacm-list', 'iso2', 'iso3']:
                 value_list.append(quoted_if_required(entity[object]))
-                
+
             # Add the gelocation data
             geo = entity['geolocation']
             value_list.append(quoted_if_required(geo['lat']))
             value_list.append(quoted_if_required(geo['lon']))
-            
+
             # Add the Label Data
             labels = entity['label']
             for label in ['arabic-short', 'chinese-short', 'french-short', 'default', 'fts', 'russian-short', 'spanish-short']:
                 value_list.append(quoted_if_required(labels[label]))
-            
+
             values = ', '.join(value_list)
             dbdo(dbc,'INSERT INTO [un_places] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
 
@@ -282,7 +285,7 @@ def read_china_places():
     dbdo(dbc, 'BEGIN', VERBOSE)
     for line in lines:
         components = line.rstrip('\n').split(';')
-        #print (components)
+        #print(components)
         values = '{}'.format(components.pop(0))
         for component in components:
             values += r', "{}"'.format(component)
@@ -300,7 +303,7 @@ def read_3g_dxy_cn_json():
     files = os.listdir(DATADIR)
     areastat = re.compile(r'^([0-9]{8})_([0-9]{6})_getAreaStat.json$')
     already_processed = list_from_query(dbc, 'select filename from files;') 
-    print ('Reading 3G_DXY.CN data')
+    print('Reading 3G_DXY.CN data')
     for filename in files:
         match = areastat.match(filename)
 
@@ -311,25 +314,25 @@ def read_3g_dxy_cn_json():
             timestamp = '{}{}'.format(date, time)
             #print(int(date[0:4]), int(date[4:6]), int(date[6:]), int(time[0:2]), int(time[2:4]), int(time[4:]))
             iso_date = datetime.datetime(int(date[0:4]), int(date[4:6]), int(date[6:]), int(time[0:2]), int(time[2:4]), int(time[4:]))
-            print (timestamp, filename, iso_date)
+            print(timestamp, filename, iso_date)
             with open('{}/{}'.format(DATADIR, filename), 'r') as infile:
                 areastats = json.loads(infile.read())
 
-            print (len(areastats))
+            print(len(areastats))
             # Walk the tree
             pfields_base = 'Timestamp, ISO_Date, ProvinceName, Province_EN'
             cfields_base = 'Timestamp, ISO_Date, ProvinceName, Province_EN, City_EN'
             #cfields = 'Timestamp, ISO_Date, Province_ZH, Province_EN, CityEN, CityName, Confirmed, Suspected, Cured, Dead, AllConfirmed, LocationID'
             for province in areastats:
                 province_en = value_from_query(dbc, 'select distinct(ADM1_EN) from places where ADM1_ZH like \'{}%\';'.format(province['provinceName']))
-                #print ('Province:', province.keys())
+                #print('Province:', province.keys())
                 values = '{}, "{}", "{}", "{}"'.format(
                             int(timestamp), iso_date, 
                             province['provinceName'], province_en)
 
                 # Build up the string of Columns and values depending on what's in the JSON
                 pfields = pfields_base
-                #print ('Province:', province.keys(), province)
+                #print('Province:', province.keys(), province)
                 for key in province.keys():
                     if key != 'cities':
                         pfields += ', {}'.format(key)
@@ -341,12 +344,12 @@ def read_3g_dxy_cn_json():
                 sql_cmd = 'INSERT into [cn_prov] ({}) Values ({})'.format(pfields, values)
                 dbdo(dbc, sql_cmd, VERBOSE)
                 #printlog (case_count)
-                
+
                 # Now do the same for every city in the province
                 for city in province['cities']:
                     city_en = value_from_query(dbc, 'select distinct(ADM2_EN) from [places] where ADM2_ZH like \'{}%\';'.format(city['cityName']))
-                    #print ('City:', city.keys(), city)
-                
+                    #print('City:', city.keys(), city)
+
                     # Build up the string of Columns and values depending on what's in the JSON
                     cfields = cfields_base
                     values = '{}, "{}", "{}", "{}", "{}"'.format(
@@ -373,26 +376,27 @@ def field_types_from_schema(table):
     lines = rows_from_query(dbc, 'PRAGMA table_info({})'.format(table))
     field_types = {}
     for line in lines:
-        #print (line)
+        #print(line)
         #fields = line.split('|')
-        #print (fields)
+        #print(fields)
         field_types[line[1]] = line[2]
-    #print (field_types)
+    #print(field_types)
     return field_types
 
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
     already_processed = list_from_query(dbc, 'select filename from files;') 
     files = os.listdir(datadir)
-    #print (files)
-    
-    print ('Reading JHU CSSE data')
+    #print(files)
+
+    print('Reading JHU CSSE data')
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
-    ymd_date  = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
-    city_state = re.compile(r'^"(.*?)#\s*(.*?)"') # split '"Tempe; AZ", a, b, c' with 'Tempe_AZ, a, b, c'
-    fixcckey = re.compile(r'"([A-Za-z. ]+?);\s*([A-Za-z. ]+?);\s*([A-Za-z. ]+?)"') # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
+    ymd_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
+    city_state = re.compile(r'^(.*?)\#\s*(.*)') # split '"Tempe# AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
+    fixcckey = re.compile(r'"([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)"') 
     fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
     fixspcs  = re.compile(r'(\s+)')
     cruise = re.compile(r'^([A-Z][A-Z])\s+(\(.*\))$')
@@ -401,18 +405,17 @@ def read_jhu_data():
     normalise_fields ={'Country_Region': 'Country',
                        'Province_State': 'Province',
                        'Lat': 'Latitude',
-                       'Long_': 'Longitude'
-                          }
+                       'Long_': 'Longitude'}
     field_types = field_types_from_schema('jhu_data')
 
     for filename in files:
         match = namedate.match(filename)
-        
+
         if match and (filename not in already_processed):
             dbdo(dbc, 'BEGIN', VERBOSE)
             month, day, year = match[1], match[2], match[3]
             filedate = '{:04d}-{:02d}-{:02d}'.format(int(year), int(month), int(day))
-            print (filedate, filename)
+            print(filedate, filename)
             with open('{}/{}'.format(datadir, filename), mode='r', encoding='utf-8-sig') as infile:
                 lines=list(infile)
                 # First Line - gives us the fieldnames
@@ -428,55 +431,56 @@ def read_jhu_data():
                         norm_fields.append(normalise_fields[field])
                     else:
                         norm_fields.append(field)
-                
-                print (line_fields, '\n', norm_fields)
+
+                print(line_fields, '\n', norm_fields)
 
                 for line in lines:
-                    print (line)
-                    # remove commas between double quotes - replace with ; 
+                    print('line1:{}'.format(line))
+                    # remove commas between double quotes - replace with #
                     line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', '#', line)
                     line = re.sub('"', '', line).rstrip()
-                    # The Combined Keys are "County, State, USA": swap out the commas with underscores
-                    #line = fixcckey.sub(r'\1_\2_\3', line.rstrip())
-                    print (line)
-                    
+                    print('line2:{}'.format(line))
+
                     # Put all of the fields into a dict
-                    print (line)
                     line_data = line.split(',')
                     line_dict = {}
                     for key, value in zip(norm_fields, line_data):
                         line_dict[key] = value
-                    print (line_dict)
-                    
+                    print('line_dict:{}'.format(line_dict))
+
                     # Normalise some of the inputs: Countries
                     line_dict['Country'] = normalise_countries(line_dict['Country'])
                     if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
                             line_dict['Country'] = 'Hong Kong'
                     if line_dict['Country'] == 'China' and line_dict['Province'] == 'Macau':
                             line_dict['Country'] = 'Macau'
-                            
+
                     # Earlier in the data, American Provinces were "City, ST": swap out the commas with underscores
                     # We should Fix this to have Proper State names prior to 26 Feb
                     match = city_state.match(line_dict['Province'])
                     if match:
-                        print ('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
+                        print('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
                         admin2 = match[1]
                         admin1 = match[2]
                         # Sometimes there's something like: 'Omaha, NE (From Diamond Princess)' (case from cruise ship)
                         # we shoud add the 'from ...' to the Admin2?  Or maybe to a comment field?
                         from_cruise = cruise.match(admin1)
                         if from_cruise:
-                            #print ('match:{}; admin1:{}; admin2:{}.'.format(from_cruise[0], from_cruise[1], from_cruise[2]))
+                            #print('match:{}; admin1:{}; admin2:{}.'.format(from_cruise[0], from_cruise[1], from_cruise[2]))
                             admin1 = from_cruise[1]
                             admin2 += from_cruise[2]
                         # Test for 'Calgary, Alberta' or test for [A-Z]{2}?
-                        print (admin1, admin2)
+                        print(admin1, admin2)
                         is_state = az2.match(admin1)
                         if is_state:
                             admin1 = admin1_from_abbr(admin1)
                         line_dict['Admin2'] = admin2
                         line_dict['Province'] = admin1
-                                        
+
+                    if 'Combined_Key' in line_dict.keys():
+                        # The Combined Keys are "County, State, USA": swap out the commas with underscores
+                        line_dict['Combined_Key'] = fixcckey.sub(r'\1_\2_\3', line_dict['Combined_Key'])
+
                     # Date of last update:
                     # check which form the date is in: There's a MDY format and there's a proper ISO
                     update   = line_dict['Last_Update']
@@ -491,13 +495,13 @@ def read_jhu_data():
                     else:
                         match = ymd_date.match(update)
                         if match:
-                            print (match)
+                            print(match)
                             last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), int(match[6]))
                     timestamp = last_update.strftime('%Y%m%d%H%M%S')
                     if last_update == 'NULL':    
-                        print ('BARF!', update)
+                        print('BARF!', update)
                         exit()
-                    
+
                     # if there's empty fields, set them to an appropriate null value base on the type
                     for key in line_dict.keys():
                         if line_dict[key] == '':
@@ -507,11 +511,11 @@ def read_jhu_data():
                                 line_dict[key] = 0.0
                             if field_types[key] == 'TEXT':
                                 line_dict[key] =''
-                    
+
                     #build up the values list
                     fields = ['timestamp', 'date']
                     values = [timestamp, '"{}"'.format(filedate)]
-                    print ('line_dict', line_dict)
+                    print('line_dict', line_dict)
                     for key in line_dict.keys():
                         fields.append(key)
                         if key in ['Lat, Long_']:
@@ -521,8 +525,8 @@ def read_jhu_data():
                             values.append('"{}"'.format(line_dict[key]))
                         else:
                             values.append('{}'.format(line_dict[key]))
-                        
-                    print ('fields, values', fields, values)
+
+                    print('fields, values', fields, values)
                     dbdo(dbc, 'insert into [jhu_data] ({}) Values ({});'.
                          format(','.join(fields), 
                                 ','.join(values)), VERBOSE)
@@ -541,7 +545,7 @@ def make_summary_tables():
             2. Each Country by Date (sum up provinces)
             3. Each WHO Region by date TODO
     """
-    print ('Make Summary Tables')
+    print('Make Summary Tables')
     tablespec = ('Date Text, '
                  'Confirmed Integer, '
                  'Deaths Integer, '
@@ -554,7 +558,7 @@ def make_summary_tables():
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
-        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\"'.format(country))
+        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\" and province > ""'.format(country))
         # Make a Table of all the provinces
         country_dates = {}
         dbdo(dbc, 
@@ -579,8 +583,8 @@ def make_summary_tables():
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         # Make a Table of all the provinces, if there's more than one.
         if len(provinces) > 1:
-            print ( country, provinces)
-            exit()
+            print( country, provinces)
+            #exit()
             for province in provinces:
                 dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
                 dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
@@ -605,7 +609,7 @@ def make_summary_tables():
                     '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
                     '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
                 dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
-            
+
         dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
@@ -624,13 +628,13 @@ def make_summary_tables():
             if row is not None:
                 date = row[0]
                 for idx in range(1,len(row)):
-                    #print (idx)
+                    #print(idx)
                     if row[idx] is not None:
                         world[idx-1] += row[idx]
-                
+
         world_str = ', '.join(['{}'.format(w) for w in world])
-        
-        #print (country, world, world_str)
+
+        #print(country, world, world_str)
         dbdo(dbc,
                 ('INSERT into [World.temp] (Date, confirmed, deaths, Recovered, Active) '
                  'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
@@ -648,9 +652,9 @@ def make_summary_tables():
           '  FROM [World.temp] order by date').format(R = rounding), 
          VERBOSE)
     dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
-    
+
     dbdo(dbc, 'COMMIT', VERBOSE)
-    
+
     return None
 
 def main():
@@ -668,12 +672,13 @@ def main():
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
         read_jhu_data()
-        #make_summary_tables()
+        make_summary_tables()
 
     if CLEANUP:
         delete_named_tables(dbc, '%.0', VERBOSE)
-        delete_named_tables(dbc, '%.', VERBOSE)
-        
+        #delete_named_tables(dbc, '%.', VERBOSE)
+        delete_named_tables(dbc, '%#%', VERBOSE)
+
     return None
 
 if __name__ == '__main__':
@@ -682,7 +687,7 @@ if __name__ == '__main__':
     FIRSTRUN = 0
     CLEANUP = 1
     UPDATE = 1 # Otherwise this does nothing!
-    
+
     DATADIR = '01_download_data'
     for arg in sys.argv:
         if arg == 'VERBOSE':
@@ -693,7 +698,7 @@ if __name__ == '__main__':
             UPDATE = 1 - UPDATE
         if arg == 'CLEANUP':
             CLEANUP = 1 - CLEANUP
-    
+
     db_connect = sqlite3.connect('ncorv2019.sqlite')
     db_connect.create_function('CAGR', 3, cagr)
     dbc = db_connect.cursor()
