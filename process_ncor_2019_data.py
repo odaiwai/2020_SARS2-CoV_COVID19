@@ -383,6 +383,13 @@ def field_types_from_schema(table):
     #print(field_types)
     return field_types
 
+def read_hgis_data()
+    datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
+    already_processed = list_from_query(dbc, 'select filename from files;') 
+    files = os.listdir(datadir)
+
+    return None
+
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
     already_processed = list_from_query(dbc, 'select filename from files;') 
@@ -672,6 +679,7 @@ def main():
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
         read_jhu_data()
+        read_hgis_data()
         make_summary_tables()
 
     if CLEANUP:

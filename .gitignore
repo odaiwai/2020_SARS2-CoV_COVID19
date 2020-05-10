@@ -14,7 +14,8 @@ __pycache__
 python_scripting.py
 .DS_Store
 gis
-plots
+plots/*
+!plots/Confirmed_since_start.png 
 urls.dat
 *.code-workspace
 temp.py
