@@ -206,9 +206,10 @@ def make_days_since_start_plot():
         
     return None
 
-def make_world_stackplots_from_jhu():
+def make_world_gridplots_from_jhu():
     """ 
-    Make a World Stackplot :
+    Make a grid plot (nxn) of the top countries by number of cases
+    Each graph should be the rolling average of new confirmed cases over the last N days
     """
     start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC  limit 1')
     final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
@@ -218,27 +219,35 @@ def make_world_stackplots_from_jhu():
     countries = list_of_countries_by_confirmed(final_date_str)
     plt.style.use('seaborn-paper')
 
-    graphs = []
-    # Contains a list of the parameters for the stackplots
-    # Graph, Description, scale, base
-    graphs.append(['Confirmed', 'All Confirmed Cases (includes Deaths, Recoveries)', 'linear', 10]) 
-    graphs.append(['Recovered', 'All Recoveries', 'linear', 10])
-    graphs.append(['Deaths', 'AllDeaths', 'linear', 10])
-    all_cure = []
-    all_sick = []
-    all_dead = []
+    graphs = graph_definitions()
+    num_graphs = 5 # Number of graphs in a row
         
-    for graph, description, scale, base in graphs:
-        fig = plt.figure(figsize=FIGSIZE)
-        ax = plt.axes()
-        fig.suptitle('SARS2-CoV /COVID 19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
-        #ax.set(title = 'All Countries')
-        #ax.set(xlabel='Reporting Date', xlim = axis_range, ylabel='Reported Cases (includes Recoveries and Deaths)')
-        #ax.format_data = mdates.DateFormatter('%Y-%m-%d')
-        #ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-        #fig.autofmt_xdate()
-        
-    # List to hold the data for the combined stackplots
+    for graph, limit, description, scale, base, lag, doubling in graphs:
+        fig, axes  = plt.subplots(num_graphs, num_graphs, figsize=FIGSIZE)
+        fig.suptitle('SARS-CoV2 /COVID-19 for Major Reporting Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+        for row in range(0, num_graphs):
+            for col in range(0, num_graphs):
+                country = countries[row*num_graphs + col]
+                if lag > 0:
+                    cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
+                           'cast({G} - LAG ({G}, {D}, 0) OVER (order by date) as REAL)/{D} as {G} '
+                         'from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit, D=lag))
+                else:
+                    cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
+                           '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph, L = limit))
+                results = dict_from_query(dbc, cmd)
+                days, cases = keys_values_as_lists_from_dict(results)
+            
+                # Add a marker and optionly an annotation for the last point
+                axes[row, col].plot(days, cases)
+                axes[row, col].set_title('{}'.format(country))
+
+
+        if lag > 0:
+            fig.savefig('plots/{G}_new_grid_since_start.png'.format(G=graph), format = 'png')
+        else:
+            fig.savefig('plots/{G}_grid_since_start.png'.format(G=graph), format = 'png')
+        plt.close()
     
     return None
 
@@ -436,10 +445,8 @@ def main():
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
     make_country_plots_from_jhu()
+    make_world_gridplots_from_jhu()
     #make_plots_from_dxy()
-    # Other plots to make
-    #   Average new cases per N days for all countries
-    #   Average Deaths per N Days for all countries
     
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
