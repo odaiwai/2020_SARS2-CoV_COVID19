@@ -58,7 +58,8 @@ def make_tables():
                     'FIPS Integer, Admin2 Text, Country Text, Province Text, ' # Admin2 is county or city
                     'Last_Update Text, incident_rate Real, People_tested Integer, People_hospitalized Integer, '
                     'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
-                    'Latitude Real, Longitude Real, Combined_Key Text, comment Text'),
+                    'Latitude Real, Longitude Real, Combined_Key Text, comment Text',
+                    'Incidence_Rate Real, Case_Fatality_ratio Real'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
                    'ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, '
                    'ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, '
@@ -379,11 +380,13 @@ def field_types_from_schema(table):
         #print(line)
         #fields = line.split('|')
         #print(fields)
-        field_types[line[1]] = line[2]
-    #print(field_types)
+        key = line[1].lower()
+        value = line[2].lower()
+        field_types[key] = value
+    print(field_types)
     return field_types
 
-def read_hgis_data()
+def read_hgis_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
     already_processed = list_from_query(dbc, 'select filename from files;') 
     files = os.listdir(datadir)
@@ -412,7 +415,8 @@ def read_jhu_data():
     normalise_fields ={'Country_Region': 'Country',
                        'Province_State': 'Province',
                        'Lat': 'Latitude',
-                       'Long_': 'Longitude'}
+                       'Long_': 'Longitude',
+                       'Case-Fatality_Ratio': 'Case_Fatality_Ratio'}
     field_types = field_types_from_schema('jhu_data')
 
     for filename in files:
@@ -435,9 +439,9 @@ def read_jhu_data():
                 norm_fields = []#'admin2']
                 for field in line_fields:
                     if field in normalise_fields.keys():
-                        norm_fields.append(normalise_fields[field])
+                        norm_fields.append(normalise_fields[field].lower())
                     else:
-                        norm_fields.append(field)
+                        norm_fields.append(field.lower())
 
                 print(line_fields, '\n', norm_fields)
 
@@ -456,15 +460,15 @@ def read_jhu_data():
                     print('line_dict:{}'.format(line_dict))
 
                     # Normalise some of the inputs: Countries
-                    line_dict['Country'] = normalise_countries(line_dict['Country'])
-                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Hong Kong':
-                            line_dict['Country'] = 'Hong Kong'
-                    if line_dict['Country'] == 'China' and line_dict['Province'] == 'Macau':
-                            line_dict['Country'] = 'Macau'
+                    line_dict['country'] = normalise_countries(line_dict['country'])
+                    if line_dict['country'] == 'China' and line_dict['province'] == 'Hong Kong':
+                            line_dict['country'] = 'Hong Kong'
+                    if line_dict['country'] == 'China' and line_dict['province'] == 'Macau':
+                            line_dict['country'] = 'Macau'
 
                     # Earlier in the data, American Provinces were "City, ST": swap out the commas with underscores
                     # We should Fix this to have Proper State names prior to 26 Feb
-                    match = city_state.match(line_dict['Province'])
+                    match = city_state.match(line_dict['province'])
                     if match:
                         print('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
                         admin2 = match[1]
@@ -490,7 +494,7 @@ def read_jhu_data():
 
                     # Date of last update:
                     # check which form the date is in: There's a MDY format and there's a proper ISO
-                    update   = line_dict['Last_Update']
+                    update   = line_dict['last_update']
                     last_update = 'NULL' # So we can catch it if it falls 
                     match = mdy_date.match(update)
                     if match:
@@ -512,11 +516,11 @@ def read_jhu_data():
                     # if there's empty fields, set them to an appropriate null value base on the type
                     for key in line_dict.keys():
                         if line_dict[key] == '':
-                            if field_types[key] == 'INT':
+                            if field_types[key] == 'integer':
                                 line_dict[key] = 0
-                            if field_types[key] == 'REAL':
+                            if field_types[key] == 'real':
                                 line_dict[key] = 0.0
-                            if field_types[key] == 'TEXT':
+                            if field_types[key] == 'text':
                                 line_dict[key] =''
 
                     #build up the values list
@@ -545,6 +549,22 @@ def read_jhu_data():
 
     return len(files)
 
+def safe_list_for_tablenames(given_list):
+    """ Given a list of table names, make sure they're safe for use
+        as table names. i.e. remove apostrophes
+    """
+    bad_chars = list("`~!@#$%^&*()-_=+\|[{]};:'\",<.>/?")
+    good_char = r'_'
+    safe_list = []
+    for item in given_list:
+        for bad_char in bad_chars:
+            if bad_char in item: # Check first to avoid the expensive replace op.
+                item = item.replace(bad_char, good_char)
+
+        safe_list.append(item)
+
+    return safe_list
+
 def make_summary_tables():
     """
         Make Tables from JHU data of:
@@ -566,6 +586,11 @@ def make_summary_tables():
         dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
         provinces = list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\" and province > ""'.format(country))
+        # some provinces have an apostrophe (') As this is used for the table name, 
+        # we must escape it manually
+        provinces = safe_list_for_tablenames(provinces)
+       
+
         # Make a Table of all the provinces
         country_dates = {}
         dbdo(dbc, 
@@ -593,6 +618,10 @@ def make_summary_tables():
             print( country, provinces)
             #exit()
             for province in provinces:
+                if "'" in province:
+                    print('Exiting:', province, provinces)
+                    exit()
+            
                 dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
                 dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
                 # Create the Provincial Tables (also need to split the ISO date into Date and Time)
