@@ -38,8 +38,8 @@ if ( $getters) {
 	
 	run_all_scripts(@getters);
 	# Run the JHU file separately as it requires a parameter
-	`./process_ncor_2019_data.py UPDATE >>$logfile.log 2>&1`;
-	`./produce_ncor_plots.py >>$logfile.log 2>&1`;
+	`./process_ncor_2019_data.py UPDATE >>$logfile 2>>$logfile`;
+	`./produce_ncor_plots.py >>$logfile 2>>$logfile`;
 }
 
 #run_all_scripts(@parsers);
@@ -77,7 +77,7 @@ sub run_all_scripts {
 	for my $script (@scripts) {
 		chomp $script;
 		print "Running $script $options...\n" if $verbose;
-		my $result = `./$script $options >>$logfile 2>&1`;
+		my $result = `./$script $options >>$logfile 2>>$logfile`;
 		print "$result\n" if $verbose;
 		$results ++;
 	}
