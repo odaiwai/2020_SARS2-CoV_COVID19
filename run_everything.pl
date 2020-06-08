@@ -38,7 +38,7 @@ if ( $getters) {
 	
 	run_all_scripts(@getters);
 	# Run the JHU file separately as it requires a parameter
-	`./process_ncor_2019_data.py UPDATE >>$logfile 2>>$logfile`;
+	`./process_ncor_2019_data.py >>$logfile 2>>$logfile`;
 	`./produce_ncor_plots.py >>$logfile 2>>$logfile`;
 }
 
@@ -57,15 +57,16 @@ push @plots, "Confirmed_new_since_start";
 push @plots, "Recovered_new_since_start";
 push @plots, "Deaths_new_since_start";
 
-my @variants = qw/.png _since_start.png/;
+my @variants = qw/.png _since_start.png _new_since_start.png/;
 
 for my $plot (@plots) {
 	foreach my $variant (@variants) {
 		my $filename = "plots/$plot$variant";
 		if ( -f $filename ) {
 			my $size = ( -s $filename );
-			print "$plot$variant exists: $size bytes\n" if $verbose;
+			print "$plot$variant exists: $size bytes. copying..." if $verbose;
 			my $result = `cp "$filename" /var/www/www.diaspoir.net/html/health/COVID19/`;
+			print "done.\n" if $verbose;
 		}
 	}
 }
