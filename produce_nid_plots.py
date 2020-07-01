@@ -13,8 +13,11 @@ import re
 # Future versions of pandas will require you to explicitly register matplotlib converters.
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
+
 # my DB Helper
-from db_helper import *
+import sys
+sys.path.append('/home/odaiwai/src/dob_DBHelper')
+import db_helper as dbdo
 
 
 def make_table_of_disease_by_month():
@@ -22,7 +25,7 @@ def make_table_of_disease_by_month():
     dbc.execute('DROP TABLE IF EXISTS [disease_by_month];')
 
     # get a list of the diseases
-    diseases = list_from_query(dbc, 'select distinct(ref) from [diseases];')
+    diseases = dbdo.list_from_query(dbc, 'select distinct(ref) from [diseases];')
     table_spec = 'Date Text UNIQUE PRIMARY KEY'
     for disease in diseases:
         table_spec += ', {} Int'.format(disease)
@@ -34,7 +37,7 @@ def make_table_of_disease_by_month():
     #print (diseases, type(diseases))
     for disease in diseases:
         print('Disease: ', disease)
-        all_cases = rows_from_query(
+        all_cases = dbdo.rows_from_query(
             dbc, 'select * from  [{}] order by year;'.format(disease))
         for year_data in all_cases:
             print(year_data)
@@ -122,7 +125,7 @@ if __name__ == '__main__':
     FIRSTRUN = 0
 
     # Check if the table disease_by_month exists
-    check = list_from_query(
+    check = dbdo.list_from_query(
         dbc, 'select name from sqlite_master where name like \'disease_by_month\';')
     if (FIRSTRUN is True) or (len(check) == 0):
         make_table_of_disease_by_month()
@@ -133,7 +136,7 @@ if __name__ == '__main__':
     # print(type(df))
 
     # get the list of dates and convert to date objects
-    date_strs = list_from_query(
+    date_strs = dbdo.list_from_query(
         dbc, 'select Date from [disease_by_month] order by date;')
     dates = []
     for date_str in date_strs:
@@ -151,12 +154,12 @@ if __name__ == '__main__':
         hk_pop_values.append(hk_pop[date])
 
     axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]
-    diseases = list_from_query(dbc, 'select distinct(ref) from diseases;')
-    disease_full_names = dict_from_query(
+    diseases = dbdo.list_from_query(dbc, 'select distinct(ref) from diseases;')
+    disease_full_names = dbdo.dict_from_query(
         dbc, 'select distinct(ref), name from [diseases];')
 
     for disease in diseases:
-        cases = list_from_query(
+        cases = dbdo.list_from_query(
             dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
         print('Plotting {}...'.format(disease))
         fig, ax = plt.subplots()

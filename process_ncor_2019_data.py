@@ -13,8 +13,10 @@ import re
 import sqlite3
 import json
 import datetime
-from db_helper import * # This is a library of my own database routines - it just 
-                        # wraps sqlite commands into handier methods I like
+
+sys.path.append('/home/odaiwai/src/dob_DBHelper')
+import db_helper as dbdo # This is a library of my own database routines - it just 
+                         # wraps sqlite commands into handier methods I like
 
 def make_tables():
     # Make the Database tables from the JSON
@@ -75,7 +77,7 @@ def make_tables():
                         'world_pct Real'),
         'files': ('filename Text, Source Text, dateProcessed Text')
             }
-    make_tables_from_dict(dbc, tabledefs, VERBOSE)
+    dbdo.make_tables_from_dict(dbc, tabledefs, VERBOSE)
 
 def cagr(value1, value2, interval):
     """ Calculate the CAGR (Compound Average Growth Rate) between value1 and value 2 over interval
@@ -125,7 +127,7 @@ def read_hksarg_pr():
     with open(filename, 'r') as infh:
         lines = list(infh)
 
-    dbdo(dbc, 'BEGIN', VERBOSE)
+    dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
     for line in lines:
         values = tab.split(line)
         date_str = values.pop(0)
@@ -139,9 +141,9 @@ def read_hksarg_pr():
                                  int(date_list[4]))
 
         sqlcmd = 'INSERT OR IGNORE INTO [hksarg] (Timestamp, New, Total, Cured, Remain, Stable, Serious, Critical, Confirmed, Dead) Values (\"{}\", {});'.format(date, escaped)
-        dbdo(dbc, sqlcmd, VERBOSE)
+        dbdo.dbdo(dbc, sqlcmd, VERBOSE)
 
-    dbdo(dbc, 'COMMIT', VERBOSE)
+    dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None 
 
 def quoted_if_required(string):
@@ -220,7 +222,7 @@ def read_populations():
         fixcomma = re.compile(r'([0-9]),([0-9])')
         descriptions = lines.pop(0)
         print(descriptions)
-        dbdo(dbc, 'BEGIN', VERBOSE)
+        dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
         for line in lines:
             values = line.rstrip('\n').split(';')
             print(values)
@@ -240,9 +242,9 @@ def read_populations():
 
                 value_list.append(quoted_if_required(value))
             values = ', '.join(value_list)
-            dbdo(dbc,'INSERT INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+            dbdo.dbdo(dbc,'INSERT INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
 
-        dbdo(dbc, 'COMMIT', VERBOSE)
+        dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None
 
 def read_un_places():
@@ -253,7 +255,7 @@ def read_un_places():
         fields = ('id, hrinfo_id, fts_api_id, reliefweb_id, m49, admin_level, dgacm_list, '
                   'iso2, iso3, lat, long, arabic_short, chinese_short, french_short, '
                   'default_form, fts, russian_short, spanish_short')
-        dbdo(dbc, 'BEGIN', VERBOSE)
+        dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
         for entity in un_countries['data']:
             value_list = []
             for object in ['id', 'hrinfo_id', 'fts_api_id', 'reliefweb_id', 'm49', 'admin_level', 'dgacm-list', 'iso2', 'iso3']:
@@ -270,9 +272,9 @@ def read_un_places():
                 value_list.append(quoted_if_required(labels[label]))
 
             values = ', '.join(value_list)
-            dbdo(dbc,'INSERT INTO [un_places] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+            dbdo.dbdo(dbc,'INSERT INTO [un_places] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
 
-        dbdo(dbc, 'COMMIT', VERBOSE)
+        dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None
 
 def read_china_places():
@@ -283,7 +285,7 @@ def read_china_places():
         lines = list(infh)
 
     fields =  'OBJECTID, ADMIN_TYPE, ADM2_CAP, ADM2_EN, ADM2_ZH, ADM2_PCODE, ADM1_EN, ADM1_ZH, ADM1_PCODE, ADM0_EN, ADM0_ZH, ADM0_PCODE'
-    dbdo(dbc, 'BEGIN', VERBOSE)
+    dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
     for line in lines:
         components = line.rstrip('\n').split(';')
         #print(components)
@@ -291,9 +293,9 @@ def read_china_places():
         for component in components:
             values += r', "{}"'.format(component)
 
-        dbdo(dbc, 'INSERT into [places] ({}) Values ({})'.format(fields, values), VERBOSE)
+        dbdo.dbdo(dbc, 'INSERT into [places] ({}) Values ({})'.format(fields, values), VERBOSE)
 
-    dbdo(dbc, 'COMMIT', VERBOSE)
+    dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None
 
 def read_3g_dxy_cn_json():
@@ -303,7 +305,7 @@ def read_3g_dxy_cn_json():
     """
     files = os.listdir(DATADIR)
     areastat = re.compile(r'^([0-9]{8})_([0-9]{6})_getAreaStat.json$')
-    already_processed = list_from_query(dbc, 'select filename from files;') 
+    already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
     print('Reading 3G_DXY.CN data')
     for filename in files:
         match = areastat.match(filename)
@@ -325,7 +327,7 @@ def read_3g_dxy_cn_json():
             cfields_base = 'Timestamp, ISO_Date, ProvinceName, Province_EN, City_EN'
             #cfields = 'Timestamp, ISO_Date, Province_ZH, Province_EN, CityEN, CityName, Confirmed, Suspected, Cured, Dead, AllConfirmed, LocationID'
             for province in areastats:
-                province_en = value_from_query(dbc, 'select distinct(ADM1_EN) from places where ADM1_ZH like \'{}%\';'.format(province['provinceName']))
+                province_en = dbdo.value_from_query(dbc, 'select distinct(ADM1_EN) from places where ADM1_ZH like \'{}%\';'.format(province['provinceName']))
                 #print('Province:', province.keys())
                 values = '{}, "{}", "{}", "{}"'.format(
                             int(timestamp), iso_date, 
@@ -343,12 +345,12 @@ def read_3g_dxy_cn_json():
                             values += ', {}'.format(province[key])
 
                 sql_cmd = 'INSERT into [cn_prov] ({}) Values ({})'.format(pfields, values)
-                dbdo(dbc, sql_cmd, VERBOSE)
+                dbdo.dbdo(dbc, sql_cmd, VERBOSE)
                 #printlog (case_count)
 
                 # Now do the same for every city in the province
                 for city in province['cities']:
-                    city_en = value_from_query(dbc, 'select distinct(ADM2_EN) from [places] where ADM2_ZH like \'{}%\';'.format(city['cityName']))
+                    city_en = dbdo.value_from_query(dbc, 'select distinct(ADM2_EN) from [places] where ADM2_ZH like \'{}%\';'.format(city['cityName']))
                     #print('City:', city.keys(), city)
 
                     # Build up the string of Columns and values depending on what's in the JSON
@@ -364,17 +366,17 @@ def read_3g_dxy_cn_json():
                             values += ', {}'.format(city[key])
 
                     sql_cmd = 'INSERT into [cn_city] ({}) Values ({})'.format(cfields, values)
-                    dbdo(dbc, sql_cmd, VERBOSE)
+                    dbdo.dbdo(dbc, sql_cmd, VERBOSE)
 
             # Only add to the database on success addition
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "3GDXY", "{}")'.format(filename, now), VERBOSE)
-            dbdo(dbc, 'COMMIT', VERBOSE)
+            dbdo.dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "3GDXY", "{}")'.format(filename, now), VERBOSE)
+            dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
 
     return None
 
 def field_types_from_schema(table):
-    lines = rows_from_query(dbc, 'PRAGMA table_info({})'.format(table))
+    lines = dbdo.rows_from_query(dbc, 'PRAGMA table_info({})'.format(table))
     field_types = {}
     for line in lines:
         #print(line)
@@ -388,14 +390,14 @@ def field_types_from_schema(table):
 
 def read_hgis_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
-    already_processed = list_from_query(dbc, 'select filename from files;') 
+    already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
     files = os.listdir(datadir)
 
     return None
 
 def read_jhu_data():
     datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
-    already_processed = list_from_query(dbc, 'select filename from files;') 
+    already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
     files = os.listdir(datadir)
     #print(files)
 
@@ -423,7 +425,7 @@ def read_jhu_data():
         match = namedate.match(filename)
 
         if match and (filename not in already_processed):
-            dbdo(dbc, 'BEGIN', VERBOSE)
+            dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
             month, day, year = match[1], match[2], match[3]
             filedate = '{:04d}-{:02d}-{:02d}'.format(int(year), int(month), int(day))
             print(filedate, filename)
@@ -538,14 +540,14 @@ def read_jhu_data():
                             values.append('{}'.format(line_dict[key]))
 
                     print('fields, values', fields, values)
-                    dbdo(dbc, 'insert into [jhu_data] ({}) Values ({});'.
+                    dbdo.dbdo(dbc, 'insert into [jhu_data] ({}) Values ({});'.
                          format(','.join(fields), 
                                 ','.join(values)), VERBOSE)
                     #exit()
             # Only add to the database on success addition
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "JHU", "{}")'.format(filename, now), VERBOSE)
-            dbdo(dbc, 'COMMIT', VERBOSE)
+            dbdo.dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "JHU", "{}")'.format(filename, now), VERBOSE)
+            dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
 
     return len(files)
 
@@ -578,14 +580,14 @@ def make_summary_tables():
                  'Deaths Integer, '
                  'Recovered Integer, '
                  'Active Integer')
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_data];')
+    countries = dbdo.list_from_query(dbc, 'select distinct(country) from [jhu_data];')
     rounding = 4
     for country in countries:
-        dbdo(dbc, "BEGIN", VERBOSE)
-        dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
-        dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
+        dbdo.dbdo(dbc, "BEGIN", VERBOSE)
+        dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}]'.format(country), VERBOSE)
+        dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         #dbdo(dbc, 'CREATE TABLE [{}] ({})'.format(country, tablespec), VERBOSE)
-        provinces = list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\" and province > ""'.format(country))
+        provinces = dbdo.list_from_query(dbc, 'select distinct(province) from [jhu_data] where country = \"{}\" and province > ""'.format(country))
         # some provinces have an apostrophe (') As this is used for the table name, 
         # we must escape it manually
         provinces = safe_list_for_tablenames(provinces)
@@ -593,14 +595,14 @@ def make_summary_tables():
 
         # Make a Table of all the provinces
         country_dates = {}
-        dbdo(dbc, 
+        dbdo.dbdo(dbc, 
              ('CREATE TABLE [{C}.temp] AS '
               '  SELECT distinct(date) || \' 17:00\' AS Date, '
               '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
               '   sum(Recovered) as Recovered, sum(Active) as Active '
               '  FROM [jhu_data] where country = \'{C}\' group by date order by date'
              ).format(C=country), VERBOSE)
-        dbdo(dbc, 
+        dbdo.dbdo(dbc, 
              ('CREATE TABLE [{C}] AS '
               '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
               '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
@@ -612,7 +614,7 @@ def make_summary_tables():
               '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
               '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
               '  FROM [{C}.temp] order by date').format(C=country, R = rounding), VERBOSE)
-        dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
+        dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}.temp]'.format(country), VERBOSE)
         # Make a Table of all the provinces, if there's more than one.
         if len(provinces) > 1:
             print( country, provinces)
@@ -622,17 +624,17 @@ def make_summary_tables():
                     print('Exiting:', province, provinces)
                     exit()
             
-                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
-                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
+                dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}]'.format(country, province), VERBOSE)
+                dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
                 # Create the Provincial Tables (also need to split the ISO date into Date and Time)
-                dbdo(dbc, 
+                dbdo.dbdo(dbc, 
                     ('CREATE TABLE [{C}.{P}.temp] AS '
                     '  SELECT distinct(date) || \' 17:00\' AS Date, '
                     '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
                     '   sum(Recovered) as Recovered, sum(Active) as Active '
                     '  FROM [jhu_data] where country = \'{C}\' and province = \'{P}\' group by date order by date'
                     ).format(C=country, P=province, R = rounding), VERBOSE)
-                dbdo(dbc, 
+                dbdo.dbdo(dbc, 
                     ('CREATE TABLE [{C}.{P}] AS '
                     '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
                     '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
@@ -644,20 +646,20 @@ def make_summary_tables():
                     '   ROUND(CAGR(Deaths,    LAG (Deaths,    7, 0) OVER (order by date), 7), {R}) as D7day, '
                     '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
                     '  FROM [{C}.{P}.temp] order by date').format(C=country, P=province, R = rounding), VERBOSE)
-                dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
+                dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [{}.{}.temp]'.format(country, province), VERBOSE)
 
-        dbdo(dbc, 'COMMIT', VERBOSE)
+        dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
 
     # Make the master Table of all Countries
-    dbdo(dbc, 'DROP TABLE IF EXISTS [World]', VERBOSE)
-    dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
-    dbdo(dbc, 'BEGIN', VERBOSE)
-    dbdo(dbc, 'CREATE TABLE [World.temp] ({})'.format(tablespec), VERBOSE)
-    dates = list_from_query(dbc, 'select distinct(Date) from [jhu_data] order by date')
+    dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [World]', VERBOSE)
+    dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
+    dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
+    dbdo.dbdo(dbc, 'CREATE TABLE [World.temp] ({})'.format(tablespec), VERBOSE)
+    dates = dbdo.list_from_query(dbc, 'select distinct(Date) from [jhu_data] order by date')
     for date in dates:
         world = [0, 0, 0, 0]
         for country in countries:
-            row = row_from_query(
+            row = dbdo.row_from_query(
                 dbc, 
                 ('select date, Confirmed, Deaths, Recovered, Active from [{}] '
                     'where date like \'{}%\' and confirmed > 0').format(country, date))
@@ -671,10 +673,10 @@ def make_summary_tables():
         world_str = ', '.join(['{}'.format(w) for w in world])
 
         #print(country, world, world_str)
-        dbdo(dbc,
+        dbdo.dbdo(dbc,
                 ('INSERT into [World.temp] (Date, confirmed, deaths, Recovered, Active) '
                  'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
-    dbdo(dbc, 
+    dbdo.dbdo(dbc, 
          ('CREATE TABLE [World] AS '
           '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
           '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
@@ -687,9 +689,9 @@ def make_summary_tables():
           '   ROUND(CAGR(Recovered, LAG (Recovered, 7, 0) OVER (order by date), 7), {R}) as R7day '
           '  FROM [World.temp] order by date').format(R = rounding), 
          VERBOSE)
-    dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
+    dbdo.dbdo(dbc, 'DROP TABLE IF EXISTS [World.temp]', VERBOSE)
 
-    dbdo(dbc, 'COMMIT', VERBOSE)
+    dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
 
     return None
 
@@ -712,9 +714,9 @@ def main():
         make_summary_tables()
 
     if CLEANUP:
-        delete_named_tables(dbc, '%.0', VERBOSE)
-        #delete_named_tables(dbc, '%.', VERBOSE)
-        delete_named_tables(dbc, '%#%', VERBOSE)
+        dbdo.delete_named_tables(dbc, '%.0', VERBOSE)
+        #dbdo.delete_named_tables(dbc, '%.', VERBOSE)
+        dbdo.delete_named_tables(dbc, '%#%', VERBOSE)
 
     return None
 

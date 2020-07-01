@@ -14,8 +14,9 @@ import sqlite3
 import json
 import datetime
 import math
-from db_helper import * # This is a library of my own database routines - it just 
-                        # wraps sqlite commands into handier methods I like
+sys.path.append('/home/odaiwai/src/dob_DBHelper')
+import db_helper as dbdo # This is a library of my own database routines - it just 
+                         # wraps sqlite commands into handier methods I like
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.dates as mdates # for date formatting
@@ -39,19 +40,19 @@ def make_plots_from_dxy():
     """ 
     Make a plot by province:
     """
-    provinces = list_from_query(dbc, 'select distinct(provinceName) from [cn_prov];')
+    provinces = dbdo.list_from_query(dbc, 'select distinct(provinceName) from [cn_prov];')
     china_total_conf = {}
     china_total_date = {}
     china_total_cure = {}
     china_total_dead = {}
     chinadates = []
     for province in provinces:
-        province_en = value_from_query(dbc, 'select distinct(ADM1_EN) from china_places where ADM1_ZH like \'{}%\';'.format(province))
+        province_en = dbdo.value_from_query(dbc, 'select distinct(ADM1_EN) from china_places where ADM1_ZH like \'{}%\';'.format(province))
         print(province, province_en)
 
-        confirmed = dict_from_query(dbc, 'select iso_date, confirmedCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
-        dead = dict_from_query(dbc, 'select iso_date, deadCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
-        cured = dict_from_query(dbc, 'select iso_date, curedCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
+        confirmed = dbdo.dict_from_query(dbc, 'select iso_date, confirmedCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
+        dead = dbdo.dict_from_query(dbc, 'select iso_date, deadCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
+        cured = dbdo.dict_from_query(dbc, 'select iso_date, curedCount from [cn_prov] where provinceName like \'{}\' order by timestamp;'.format(province))
         dates = []
 
         #add each province to the China total
@@ -69,7 +70,7 @@ def make_plots_from_dxy():
             #time = datetime.datetime.strptime(date_str, '%H:%M:%S')
 
         #print (type(dates), dates)
-        make_plot(province_en, dates, confirmed, dead, cured)
+        make_plot(provincesce_en, dates, confirmed, dead, cured)
 
 
     #print (type(chinadates), chinadates)
@@ -78,10 +79,10 @@ def make_plots_from_dxy():
     return 0
 
 def list_of_countries_by_confirmed(final_date_str):
-    countries = list_from_query(dbc, 'select distinct(country) from [jhu_data] where date like \'{}%\' and confirmed > 1;'.format(final_date_str))
+    countries = dbdo.list_from_query(dbc, 'select distinct(country) from [jhu_data] where date like \'{}%\' and confirmed > 1;'.format(final_date_str))
     country_count = {}
     for country in countries:
-        country_count[country] = value_from_query(dbc, 'SELECT max(confirmed) from [{}]'.format(country))
+        country_count[country] = dbdo.value_from_query(dbc, 'SELECT max(confirmed) from [{}]'.format(country))
     # Create a list of tuples sorted by index 1 i.e. value field     
     country_tuples = sorted(country_count.items() , reverse=True, key=lambda x: x[1])
     # Iterate over the sorted sequence
@@ -159,9 +160,9 @@ def make_days_since_start_plot():
     plt.style.use('seaborn-paper')
     
     # General Parameters
-    max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
+    max_cases = dbdo.value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
+    start_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
+    final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M')
     final_date = datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M') + datetime.timedelta(days = 7)
     max_days = (final_date - start_date).days
@@ -206,7 +207,7 @@ def make_days_since_start_plot():
                 cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
                        '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph['column'], L = graph['limit']))
  
-            results = dict_from_query(dbc, cmd)
+            results = dbdo.dict_from_query(dbc, cmd)
             days, cases = keys_values_as_lists_from_dict(results)
             
             # Add a marker and optionly an annotation for the last point
@@ -256,9 +257,9 @@ def make_world_gridplots_from_jhu():
     Make a grid plot (nxn) of the top countries by number of cases
     Each graph should be the rolling average of new confirmed cases over the last N days
     """
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC  limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
-    max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
+    start_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC  limit 1')
+    final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
+    max_cases = dbdo.value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
     axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'), 
                   datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')]
     countries = list_of_countries_by_confirmed(final_date_str)
@@ -286,7 +287,7 @@ def make_world_gridplots_from_jhu():
                 else:
                     cmd += ('{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph['column'], L = graph['limit']))
                 #print(cmd)
-                results = dict_from_query(dbc, cmd)
+                results = dbdo.dict_from_query(dbc, cmd)
                 days, cases = keys_values_as_lists_from_dict(results)
             
                 # Determine the colour
@@ -328,18 +329,18 @@ def make_country_plots_from_jhu():
     attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
     
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
+    final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     countries = list_of_countries_by_confirmed(final_date_str)
     for country in countries:
-        date_strs = list_from_query(dbc, 'SELECT Date from [{}] order by Date'.format(country))
-        conf = list_from_query(dbc, 'SELECT Confirmed from [{}] order by Date'.format(country))
-        sick = list_from_query(dbc, 'SELECT (Confirmed-deaths-recovered) from [{}] order by Date'.format(country))
-        dead = list_from_query(dbc, 'SELECT deaths from [{}] order by Date'.format(country))
-        cure = list_from_query(dbc, 'SELECT Recovered from [{}] order by Date'.format(country))
-        cfr  = list_from_query(dbc, 'SELECT CFR from [{}] order by Date'.format(country))
-        c7d  = list_from_query(dbc, 'SELECT C7Day from [{}] order by Date'.format(country))
-        d7d  = list_from_query(dbc, 'SELECT D7Day from [{}] order by Date'.format(country))
-        d1d  = list_from_query(dbc, 'SELECT D1Day from [{}] order by Date'.format(country))
+        date_strs = dbdo.list_from_query(dbc, 'SELECT Date from [{}] order by Date'.format(country))
+        conf = dbdo.list_from_query(dbc, 'SELECT Confirmed from [{}] order by Date'.format(country))
+        sick = dbdo.list_from_query(dbc, 'SELECT (Confirmed-deaths-recovered) from [{}] order by Date'.format(country))
+        dead = dbdo.list_from_query(dbc, 'SELECT deaths from [{}] order by Date'.format(country))
+        cure = dbdo.list_from_query(dbc, 'SELECT Recovered from [{}] order by Date'.format(country))
+        cfr  = dbdo.list_from_query(dbc, 'SELECT CFR from [{}] order by Date'.format(country))
+        c7d  = dbdo.list_from_query(dbc, 'SELECT C7Day from [{}] order by Date'.format(country))
+        d7d  = dbdo.list_from_query(dbc, 'SELECT D7Day from [{}] order by Date'.format(country))
+        d1d  = dbdo.list_from_query(dbc, 'SELECT D1Day from [{}] order by Date'.format(country))
         print (country, conf[-1], cure[-1], sick[-1], dead[-1], cfr[-1])
         for index in range(0,len(d1d)):
             if type(d1d[index]) == None:
@@ -408,9 +409,9 @@ def make_days_since_start_plot_by_country():
     plt.style.use('seaborn-paper')
     
     # General Parameters
-    max_cases = value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
-    start_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
-    final_date_str = value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
+    max_cases = dbdo.value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
+    start_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
+    final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
     final_date = datetime.datetime.strptime(final_date_str, '%Y-%m-%d') + datetime.timedelta(days = 7)
     max_days = (final_date - start_date).days
@@ -449,7 +450,7 @@ def make_days_since_start_plot_by_country():
             else:
                 cmd = ('SELECT Date, ROW_NUMBER() OVER (PARTITION BY Confirmed >= 10 order by date) as days, '
                        '{G} from [{C}] where Confirmed >= 10 order by Date'.format(C = country, G=graph['column'], L = graph['limit']))
-            results = rows_from_query(dbc, cmd) # 3 x n
+            results = dbdo.rows_from_query(dbc, cmd) # 3 x n
             
             if len(results) > 0:
                 dates = []
