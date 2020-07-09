@@ -311,7 +311,7 @@ def read_3g_dxy_cn_json():
         match = areastat.match(filename)
 
         if match and not(filename in already_processed):
-            dbdo(dbc, 'BEGIN', VERBOSE)
+            dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
             date = match[1]
             time = match[2]
             timestamp = '{}{}'.format(date, time)
