@@ -119,33 +119,37 @@ def graph_definitions():
 def graph_definitions_as_dict():
     graphs = []
     graph_uuid = 0
+    """
+        TODO: add per population graph_definitions_as_dict
+    """
     for column in 'Confirmed Recovered Deaths'.split():
         if column == 'Deaths':
             limit = 1
         else:
             limit = 10
-
-        for lag in [0, 7]:
-            graph = {}
-            graph['uuid'] = graph_uuid
-            graph['column'] = column
-            graph['limit'] = limit
-            graph['lag'] = lag
-            if lag == 0:
-                graph['description'] = ' '.join([column, 'Cases'])
-                graph['scale'] = 'log'
-                graph['base'] = 2
-                graph['doubling'] = True
-            else:
-                graph['description'] = ' '.join([column, 'New Cases'])
-                graph['scale'] = 'linear'
-                graph['base'] = 10
-                graph['doubling'] = False
         
-            graph_uuid += 1
-            print(graph)
+        for per_capita in (True, False):
+            graph = {'by_pop': per_capita}
+            for lag in [0, 7]:
+                graph['uuid'] = graph_uuid
+                graph['column'] = column
+                graph['limit'] = limit
+                graph['lag'] = lag
+                if lag == 0:
+                    graph['description'] = ' '.join([column, 'Cases'])
+                    graph['scale'] = 'log'
+                    graph['base'] = 2
+                    graph['doubling'] = True
+                else:
+                    graph['description'] = ' '.join([column, 'New Cases'])
+                    graph['scale'] = 'linear'
+                    graph['base'] = 10
+                    graph['doubling'] = False
+        
+                graph_uuid += 1
+                print(graph)
 
-            graphs.append(graph)
+                graphs.append(graph)
     print()
     return graphs
 
@@ -155,7 +159,9 @@ def make_days_since_start_plot():
         
     # Style and Attributions text
     box = dict(boxstyle = 'round', fc='#ffffffff')
-    attrib_str = 'plot inspired by the work of https://twitter.com/jburnmurdoch/\nproduced by https://twitter.com/odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
+    attrib_str = ('plot inspired by the work of https://twitter.com/jburnmurdoch/\n'
+                  'produced by https://github.com/odaiwai using MatPlotLib, Python '
+                  'and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/')
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
     plt.style.use('seaborn-paper')
     
@@ -185,12 +191,13 @@ def make_days_since_start_plot():
         #for graph, limit, description, scale, base, lag, doubling in graphs:
         fig = plt.figure(figsize=FIGSIZE)
         ax = plt.axes([0.1, 0.15, 0.85, 0.75])
-        fig.suptitle('SARS2-CoV / COVID 19 for Countries (with {} cases or more)'.format(int(max_cases * FACTOR)))
+        fig.suptitle('SARS2-CoV / COVID 19 for Countries (last data: {})'.format(final_date_str))
         if graph['lag'] > 0:
             ax.set(title = '{} new cases per day (over {} days) since no. {}'.format(graph['column'], graph['lag'], graph['limit']))
         else:
             ax.set(title = '{} cases since no. {}'.format(graph['column'], graph['limit']))
-        ax.set(xlabel='Days since {} {}'.format(graph['limit'], graph['column']), xlim = axis_range, ylabel=graph['description'])
+        ax.set(xlabel='Days since {} {}'.format(graph['limit'], graph['column']), 
+               xlim = axis_range, ylabel=graph['description'])
         fig.autofmt_xdate()
         # configure the Y-Axis
         ax.set_yscale(graph['scale'], basey = graph['base'])
@@ -199,6 +206,7 @@ def make_days_since_start_plot():
         max_cases = 0
         for country in countries:
             zord = 500 - countries.index(country)
+            population = dbdo.value_from_query(dbc, 'SELECT population from [populations] where country like \'{}\''.format(country))
             if graph['lag'] > 0:
                 cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
                        'cast({G} - LAG ({G}, {D}, 0) OVER (order by date) as REAL)/{D} as {G} '
@@ -207,6 +215,7 @@ def make_days_since_start_plot():
                 cmd = ('SELECT ROW_NUMBER() OVER (PARTITION BY {G} >= {L} order by date) as days, '
                        '{G} from [{C}] where {G} >= {L} order by Date'.format(C = country, G=graph['column'], L = graph['limit']))
  
+            #print(cmd)
             results = dbdo.dict_from_query(dbc, cmd)
             days, cases = keys_values_as_lists_from_dict(results)
             
@@ -217,13 +226,17 @@ def make_days_since_start_plot():
                     max_cases = max(cases)
                 if country in countries_of_interest or ANNOTATE_ALL:
                     ax.plot(days, cases, lw = 2.5, zorder = zord)
-                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, zorder = zord)
+                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, 
+                            zorder = zord)
                     # Add a label
-                    ax.annotate('{}: {:,.0f}'.format(country, cases[-1]), (days[-1]+1, cases[-1]), fontsize = 8, ha='left', bbox = box, zorder = zord)
+                    ax.annotate('{}: {:,.0f}'.format(country, cases[-1]), 
+                                (days[-1]+1, cases[-1]), fontsize = 8, ha='left', 
+                                bbox = box, zorder = zord)
                 else:
                     #ax.plot(days, cases, color = '#80808080', lw = 1, zorder = zord)
                     ax.plot(days, cases, lw = 1, zorder = zord)
-                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3, color = '#80808080', zorder = zord)
+                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3, 
+                            color = '#80808080', zorder = zord)
 
         if graph['doubling']:
             # add dashed lines for 'doubles every (1..7) days
@@ -238,7 +251,8 @@ def make_days_since_start_plot():
                     if double[-1] >= axis_limit:
                         break
                 ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
-                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), fontsize = 8, ha='left', bbox = box, zorder = 2)
+                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), 
+                            fontsize = 8, ha='left', bbox = box, zorder = 2)
         
         ax.set(ylim = (graph['limit'], max_cases))
         # Attribution on the canvas

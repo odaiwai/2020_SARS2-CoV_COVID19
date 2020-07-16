@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     for disease in diseases:
         cases = dbdo.list_from_query(
-            dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
+        dbc, 'select {} from  [disease_by_month] order by date;'.format(disease))
         print('Plotting {}...'.format(disease))
         fig, ax = plt.subplots()
         fig.suptitle('Notifiable Infections and Diseases in HK')

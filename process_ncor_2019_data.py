@@ -62,6 +62,13 @@ def make_tables():
                     'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
                     'Latitude Real, Longitude Real, Combined_Key Text, comment Text',
                     'Incidence_Rate Real, Case_Fatality_ratio Real'),
+        'jhu_us_data': ('Timestamp Integer, Date Text, Province Text, Country Text, '
+                        'Last_Update Text, Latitude Real, Longitude Real, '
+                        'Confirmed Integer, Deaths Integer, Recovered Integer, '
+                        'Active Integer, FIPS Integer, Incident_rate Real, '
+                        'People_tested Integer, People_hospitalized Integer, '
+                        'Mortality_Rate Real, UID Integer, ISO3 Integer, '
+                        'Testing_Rate Real, Hospitalization_Rate Real'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
                    'ADM2_EN Text, ADM2_ZH Text, ADM2_PCODE Text, ADM1_EN Text, '
                    'ADM1_ZH Text, ADM1_PCODE Text, ADM0_EN Text, ADM0_ZH Text, '
@@ -75,6 +82,9 @@ def make_tables():
                         'Yearly_Change Real, Net_Change Integer, Density Real, Land_Area Integer, '
                         'Migrants Integer, Fert_rate Real, median_age Integer, Urban_pct Real, '
                         'world_pct Real'),
+        'UID_ISO_FIPS': ('UID Integer, iso2 Text, iso3 Text, code3 Integer, FIPS Text, '
+                         'Admin2 Text, Province_State Text, Country_Region Text, '
+                         'Lat Real, Long Real, Combined_Key Text, Population Integer'),
         'files': ('filename Text, Source Text, dateProcessed Text')
             }
     dbdo.make_tables_from_dict(dbc, tabledefs, VERBOSE)
@@ -209,6 +219,50 @@ def admin1_from_abbr(abbr):
                    'AB': 'Alberta', 'BC': 'British Columbia', 'YT': 'Yukon', 'NT': 'Northwest Territories',
                    'NU': 'Nunavut'}
     return states_dict[abbr]
+
+def read_generic_file(datafile, table_name):
+    """Read a generic single file into a named table
+    """
+    with open(datafile, 'r') as infile:
+        lines = list(infile)
+        fields = field_types_from_schema(table_name)
+        # first line is fieldnames
+        fixcomma = re.compile(r'([0-9]),([0-9])')
+        fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
+        fixspcs  = re.compile(r'(\s+)')
+        # First Line - gives us the fieldnames
+        line = fixprov.sub(r'\1', lines.pop(0))
+        line = fixspcs.sub(r'_', line.rstrip())
+        # The fields can change (23 March 2020), so need to have a more robust way of handling them
+        # This figures out the fields from the first line, and adds extra if necessary
+        line_fields = line.rstrip().split(r',')
+        norm_fields = normalise_fieldnames(line_fields)
+        print(line_fields, '\n', norm_fields)
+
+        dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
+        for line in lines:
+            # remove commas between double quotes - replace with #
+            line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', '#', line)
+            line = re.sub('"', '', line).rstrip()
+                    
+            values = line.rstrip('\n').split(',')
+            print(values)
+            value_list = []
+            for value in values:
+                value = fixcomma.sub(r'\1\2', value)
+                print(value, type(value))
+
+                value_list.append(quoted_if_required(value))
+            values = ', '.join(value_list)
+            field_names = ', '.join(norm_fields)
+            dbdo.dbdo(dbc,
+                      ('INSERT INTO [{T}] ({F}) '
+                       'Values ({V})'.format(T = table_name, F = field_names, V = values)), 
+                      VERBOSE)
+
+        dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
+    return None   
+    #result = read_generic_file(datafile, fields, table_name)
 
 def read_populations():
     """Read in the list of places from the UN list and fix it.
@@ -395,13 +449,37 @@ def read_hgis_data():
 
     return None
 
-def read_jhu_data():
-    datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
-    already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
+def normalise_fieldnames(line_fields):    
+    # normalise the fields
+    # Keep the field names consistent
+    normalise_fields ={'Country_Region': 'Country',
+                       'Province_State': 'Province',
+                       'Lat': 'Latitude',
+                       'Long_': 'Longitude',
+                       'Case-Fatality_Ratio': 'Case_Fatality_Ratio'
+                  }
+    norm_fields = []#'admin2']
+    for field in line_fields:
+        if field in normalise_fields.keys():
+            norm_fields.append(normalise_fields[field].lower())
+        else:
+            norm_fields.append(field.lower())
+    return norm_fields
+ 
+def  read_jhu_us_data():
+    """ Read in the US specific data from JHU - this has Testing and Hospitalization 
+        Rates in it
+    """
+    # 
+    datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports_us'
+    source = 'JHU_US'
+    table_name = 'jhu_us_data'
+
+    already_processed = dbdo.list_from_query(dbc, 'select filename from files where source = \'{}\';'.format(source)) 
     files = os.listdir(datadir)
     #print(files)
 
-    print('Reading JHU CSSE data')
+    print('Reading JHU CSSE US data')
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
     mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
@@ -413,13 +491,160 @@ def read_jhu_data():
     fixspcs  = re.compile(r'(\s+)')
     cruise = re.compile(r'^([A-Z][A-Z])\s+(\(.*\))$')
     az2 = re.compile(r'^([A-Z][A-Z])$')
-    # Keep the field names consistent
-    normalise_fields ={'Country_Region': 'Country',
-                       'Province_State': 'Province',
-                       'Lat': 'Latitude',
-                       'Long_': 'Longitude',
-                       'Case-Fatality_Ratio': 'Case_Fatality_Ratio'}
-    field_types = field_types_from_schema('jhu_data')
+
+                     
+    field_types = field_types_from_schema(table_name)
+
+    for filename in files:
+        match = namedate.match(filename)
+
+        if match and (filename not in already_processed):
+            dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
+            month, day, year = match[1], match[2], match[3]
+            filedate = '{:04d}-{:02d}-{:02d}'.format(int(year), int(month), int(day))
+            print(filedate, filename)
+            with open('{}/{}'.format(datadir, filename), mode='r', encoding='utf-8-sig') as infile:
+                lines=list(infile)
+                # First Line - gives us the fieldnames
+                line = fixprov.sub(r'\1', lines.pop(0))
+                line = fixspcs.sub(r'_', line.rstrip())
+                # The fields can change (23 March 2020), so need to have a more robust way of handling them
+                # This figures out the fields from the first line, and adds extra if necessary
+                line_fields = line.rstrip().split(r',')
+                norm_fields = normalise_fieldnames(line_fields)
+                print(line_fields, '\n', norm_fields)
+
+                for line in lines:
+                    print('line1:{}'.format(line))
+                    # remove commas between double quotes - replace with #
+                    line = re.sub(',(?=[^"]*"[^"]*(?:"[^"]*"[^"]*)*$)', '#', line)
+                    line = re.sub('"', '', line).rstrip()
+                    print('line2:{}'.format(line))
+
+                    # Put all of the fields into a dict
+                    line_data = line.split(',')
+                    line_dict = {}
+                    for key, value in zip(norm_fields, line_data):
+                        line_dict[key] = value
+                    print('line_dict:{}'.format(line_dict))
+
+                    # Normalise some of the inputs: Countries
+                    line_dict['country'] = normalise_countries(line_dict['country'])
+
+                    # Earlier in the data, American Provinces were "City, ST": swap out the commas with underscores
+                    # We should Fix this to have Proper State names prior to 26 Feb
+                    match = city_state.match(line_dict['province'])
+                    if match:
+                        print('Match:{}; City:{}; State:{}.'.format(match[0], match[1], match[2]))
+                        admin2 = match[1]
+                        admin1 = match[2]
+                        # Sometimes there's something like: 'Omaha, NE (From Diamond Princess)' (case from cruise ship)
+                        # we shoud add the 'from ...' to the Admin2?  Or maybe to a comment field?
+                        from_cruise = cruise.match(admin1)
+                        if from_cruise:
+                            #print('match:{}; admin1:{}; admin2:{}.'.format(from_cruise[0], from_cruise[1], from_cruise[2]))
+                            admin1 = from_cruise[1]
+                            admin2 += from_cruise[2]
+                        # Test for 'Calgary, Alberta' or test for [A-Z]{2}?
+                        print(admin1, admin2)
+                        is_state = az2.match(admin1)
+                        if is_state:
+                            admin1 = admin1_from_abbr(admin1)
+                        line_dict['Admin2'] = admin2
+                        line_dict['Province'] = admin1
+
+                    if 'Combined_Key' in line_dict.keys():
+                        # The Combined Keys are "County, State, USA": swap out the commas with underscores
+                        line_dict['Combined_Key'] = fixcckey.sub(r'\1_\2_\3', line_dict['Combined_Key'])
+
+                    # Date of last update:
+                    # check which form the date is in: There's a MDY format and there's a proper ISO
+                    update   = line_dict['last_update']
+                    last_update = 'NULL' # So we can catch it if it falls 
+                    # Trap the null set
+                    if update == '':
+                        last_update = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
+
+                    match = mdy_date.match(update)
+                    if match:
+                        #print(match)
+                        year = int(match[3])
+                        if year < 100:
+                            year = 2000 + year
+                        last_update = datetime.datetime(year, int(match[1]), int(match[2]), int(match[4]), int(match[5]), 0)
+                    else:
+                        match = ymd_date.match(update)
+                        if match:
+                            print(match)
+                            last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), int(match[6]))
+                    timestamp = last_update.strftime('%Y%m%d%H%M%S')
+                    if last_update == 'NULL':    
+                        print('BARF!', update)
+                        exit()
+
+                    # if there's empty fields, set them to an appropriate null value base on the type
+                    for key in line_dict.keys():
+                        if line_dict[key] == '':
+                            if field_types[key] == 'integer':
+                                line_dict[key] = 0
+                            if field_types[key] == 'real':
+                                line_dict[key] = 0.0
+                            if field_types[key] == 'text':
+                                line_dict[key] =''
+
+                    #build up the values list
+                    fields = ['timestamp', 'date']
+                    values = [timestamp, '"{}"'.format(filedate)]
+                    print('line_dict', line_dict)
+                    for key in line_dict.keys():
+                        fields.append(key)
+                        if key in ['Lat, Long_']:
+                            line_dict[key] = float(line_dict[key])
+
+                        if type(line_dict[key]) == str:
+                            values.append('"{}"'.format(line_dict[key]))
+                        else:
+                            values.append('{}'.format(line_dict[key]))
+
+                    print('fields, values', fields, values)
+                    # FIXME: Parameterise this
+                    dbdo.dbdo(dbc, 'insert into [{T}] ({F}) Values ({V});'.
+                         format(T = table_name, 
+                                F = ','.join(fields), 
+                                V = ','.join(values)), VERBOSE)
+                    #exit()
+            # Only add to the database on success addition
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # FIXME Parameterise this
+            dbdo.dbdo(dbc, 
+                      ('INSERT INTO [files] (Filename, Source, DateProcessed) '
+                       'Values ("{F}", "{S}", "{N}")'.format(F = filename, S = source, N = now)), 
+                      VERBOSE)
+            dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
+
+    return len(files)
+
+def read_jhu_data():
+    datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
+    source = 'JHU'
+    table_name = 'jhu_data'
+    already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
+    files = os.listdir(datadir)
+    #print(files)
+
+    print('Reading () CSSE data'.format(source))
+    # precompile some regular expressions...
+    namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
+    mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
+    ymd_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
+    city_state = re.compile(r'^(.*?)\#\s*(.*)') # split '"Tempe# AZ", a, b, c' with 'Tempe_AZ, a, b, c'
+    # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
+    fixcckey = re.compile(r'"([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)"') 
+    fixprov  = re.compile(r'([A-Za-z]+)/([A-Za-z]+)')
+    fixspcs  = re.compile(r'(\s+)')
+    cruise = re.compile(r'^([A-Z][A-Z])\s+(\(.*\))$')
+    az2 = re.compile(r'^([A-Z][A-Z])$')
+    field_types = field_types_from_schema(table_name)
 
     for filename in files:
         match = namedate.match(filename)
@@ -438,13 +663,7 @@ def read_jhu_data():
                 # This figures out the fields from the first line, and adds extra if necessary
                 line_fields = line.rstrip().split(r',')
                 # normalise the fields
-                norm_fields = []#'admin2']
-                for field in line_fields:
-                    if field in normalise_fields.keys():
-                        norm_fields.append(normalise_fields[field].lower())
-                    else:
-                        norm_fields.append(field.lower())
-
+                norm_fields = normalise_fieldnames(line_fields)
                 print(line_fields, '\n', norm_fields)
 
                 for line in lines:
@@ -459,7 +678,9 @@ def read_jhu_data():
                     line_dict = {}
                     for key, value in zip(norm_fields, line_data):
                         line_dict[key] = value
+                    
                     print('line_dict:{}'.format(line_dict))
+                    print('field_types:{}'.format(field_types))
 
                     # Normalise some of the inputs: Countries
                     line_dict['country'] = normalise_countries(line_dict['country'])
@@ -498,6 +719,9 @@ def read_jhu_data():
                     # check which form the date is in: There's a MDY format and there's a proper ISO
                     update   = line_dict['last_update']
                     last_update = 'NULL' # So we can catch it if it falls 
+                     # Trap the null set
+                    if update == '':
+                        last_update = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
                     match = mdy_date.match(update)
                     if match:
                         #print(match)
@@ -546,7 +770,10 @@ def read_jhu_data():
                     #exit()
             # Only add to the database on success addition
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            dbdo.dbdo(dbc, 'INSERT INTO [files] (Filename, Source, DateProcessed) Values ("{}", "JHU", "{}")'.format(filename, now), VERBOSE)
+            dbdo.dbdo(dbc, 
+                      ('INSERT INTO [files] (Filename, Source, DateProcessed) '
+                       'Values ("{F}", "{S}", "{N}")'.format(F = filename, S = source, N = now)), 
+                      VERBOSE)
             dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
 
     return len(files)
@@ -599,12 +826,13 @@ def make_summary_tables():
              ('CREATE TABLE [{C}.temp] AS '
               '  SELECT distinct(date) || \' 17:00\' AS Date, '
               '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
-              '   sum(Recovered) as Recovered, sum(Active) as Active '
+              '   sum(Recovered) as Recovered, sum(Active) as Active, '
+              '   sum(People_tested) as Tested, sum(People_hospitalized) as Hospitalized '
               '  FROM [jhu_data] where country = \'{C}\' group by date order by date'
              ).format(C=country), VERBOSE)
         dbdo.dbdo(dbc, 
              ('CREATE TABLE [{C}] AS '
-              '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+              '   SELECT Date, Confirmed, Deaths, Recovered, Active, Tested, Hospitalized, '
               '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
               '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
               '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
@@ -631,12 +859,13 @@ def make_summary_tables():
                     ('CREATE TABLE [{C}.{P}.temp] AS '
                     '  SELECT distinct(date) || \' 17:00\' AS Date, '
                     '   sum(Confirmed) as Confirmed, sum(Deaths) as Deaths, '
-                    '   sum(Recovered) as Recovered, sum(Active) as Active '
+                    '   sum(Recovered) as Recovered, sum(Active) as Active, '
+                    '   sum(People_tested) as Tested, sum(People_hospitalized) as Hospitalized '
                     '  FROM [jhu_data] where country = \'{C}\' and province = \'{P}\' group by date order by date'
                     ).format(C=country, P=province, R = rounding), VERBOSE)
                 dbdo.dbdo(dbc, 
                     ('CREATE TABLE [{C}.{P}] AS '
-                    '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
+                    '   SELECT Date, Confirmed, Deaths, Recovered, Active, Tested, Hospitalized, '
                     '   ROUND(CAST(Deaths as REAL) / Confirmed, {R}) as CFR, '
                     '   ROUND(CAST(Recovered as REAL) / Confirmed, {R}) as CRR, '
                     '   ROUND(Cast(Confirmed as REAL)/(LAG (Confirmed, 1, 0) OVER (order by date))-1, {R}) as C1day, '
@@ -674,8 +903,10 @@ def make_summary_tables():
 
         #print(country, world, world_str)
         dbdo.dbdo(dbc,
-                ('INSERT into [World.temp] (Date, confirmed, deaths, Recovered, Active) '
-                 'Values (\'{}\', {})'.format(date, world_str)), VERBOSE)
+                  ('INSERT into [World.temp] '
+                   '(Date, confirmed, deaths, Recovered, Active) '
+                   'Values (\'{}\', {})'.format(date, world_str)), 
+                  VERBOSE)
     dbdo.dbdo(dbc, 
          ('CREATE TABLE [World] AS '
           '   SELECT Date, Confirmed, Deaths, Recovered, Active, '
@@ -706,10 +937,12 @@ def main():
         read_china_places()
         read_un_places()
         read_populations()
+        read_generic_file(r'./JHU_data/2019-nCoV/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv', r'UID_ISO_FIPS' )
 
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
         read_jhu_data()
+        read_jhu_us_data()
         read_hgis_data()
         make_summary_tables()
 
