@@ -39,7 +39,7 @@ The WHO is usually behind the times. Trailing indicator.
  - This was started on the 5th of January, when initial reports of some sort of
    illness in Wuhan were started to appear in Hong Kong.  Hence the original name of the
    repository, and many reference to Wuhan Coronvirus, etc.  
- - I've changed it not, as a certain US President is doubling down on using it
+ - I've changed it now, as a certain US President is doubling down on using it
    to stoke up racial resentment, playing right into the Chinese Government's
    victimhood propaganda.
 
