@@ -82,6 +82,8 @@ def make_tables():
                         'Yearly_Change Real, Net_Change Integer, Density Real, Land_Area Integer, '
                         'Migrants Integer, Fert_rate Real, median_age Integer, Urban_pct Real, '
                         'world_pct Real'),
+        'wiki_populations': ('id text, country text, population integer, '
+                             'pct_global text, date text, source text alt_name Text'),
         'UID_ISO_FIPS': ('UID Integer, iso2 Text, iso3 Text, code3 Integer, FIPS Text, '
                          'Admin2 Text, Province_State Text, Country_Region Text, '
                          'Lat Real, Long Real, Combined_Key Text, Population Integer'),
@@ -296,13 +298,44 @@ def read_populations():
 
                 value_list.append(quoted_if_required(value))
             values = ', '.join(value_list)
-            dbdo.dbdo(dbc,'INSERT INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+            dbdo.dbdo(dbc,'INSERT OR IGNORE INTO [populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+        dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
+
+    with open('./01_download_data/wiki_populations.csv', 'r') as infile:
+        lines = list(infile)
+        fields = 'id, Country, Population, pct_Global, date, Source, alt_name'
+        # first line is fieldnames
+        fixcomma = re.compile(r'([0-9]),([0-9])')
+        descriptions = lines.pop(0)
+        print(descriptions)
+        dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
+        for line in lines:
+            values = line.rstrip('\n').split(';')
+            print(values)
+            country = values[1]
+            alt_name = normalise_countries(country)
+            print(alt_name)
+            values.append(alt_name)
+
+            value_list = []
+            print(values)
+            for value in values:
+                value = fixcomma.sub(r'\1\2', value)
+                print(value, type(value))
+                if value[-1:] == '%':
+                    value = value[0:-2]
+
+
+                value_list.append(quoted_if_required(value))
+            values = ', '.join(value_list)
+            dbdo.dbdo(dbc,'INSERT INTO [wiki_populations] ({F}) Values ({V})'.format(F=fields, V=values), VERBOSE)
+
 
         dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None
 
 def read_un_places():
-    """Read in the list of places from the UN list and fix it.
+    """ Read in the list of places from the UN list and fix it.
     """
     with open('./countries.json', 'r') as infile:
         un_countries = json.loads(infile.read())
@@ -320,7 +353,7 @@ def read_un_places():
             value_list.append(quoted_if_required(geo['lat']))
             value_list.append(quoted_if_required(geo['lon']))
 
-            # Add the Label Data
+           # Add the Label Data
             labels = entity['label']
             for label in ['arabic-short', 'chinese-short', 'french-short', 'default', 'fts', 'russian-short', 'spanish-short']:
                 value_list.append(quoted_if_required(labels[label]))
@@ -938,6 +971,8 @@ def main():
         read_un_places()
         read_populations()
         read_generic_file(r'./JHU_data/2019-nCoV/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv', r'UID_ISO_FIPS' )
+    
+    read_populations()
 
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
