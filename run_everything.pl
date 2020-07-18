@@ -50,14 +50,12 @@ my @plots = qw/World China Italy USA Iran Italy France Germany Taiwan Spain
 push @plots, "Hong Kong";
 push @plots, "United Kingdom";
 push @plots, "South Korea";
-push @plots, "Confirmed_since_start";
-push @plots, "Recovered_since_start";
-push @plots, "Deaths_since_start";
-push @plots, "Confirmed_new_since_start";
-push @plots, "Recovered_new_since_start";
-push @plots, "Deaths_new_since_start";
+push @plots, "Confirmed";
+push @plots, "Recovered";
+push @plots, "Deaths";
 
-my @variants = qw/.png _since_start.png _new_since_start.png/;
+my @variants = qw/.png _since_start.png _new_since_start.png 
+				  _per_million_since_start.png _per_million_new_since_start.png/;
 
 for my $plot (@plots) {
 	foreach my $variant (@variants) {
