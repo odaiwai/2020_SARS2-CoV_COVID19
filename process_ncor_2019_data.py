@@ -87,6 +87,8 @@ def make_tables():
         'UID_ISO_FIPS': ('UID Integer, iso2 Text, iso3 Text, code3 Integer, FIPS Text, '
                          'Admin2 Text, Province_State Text, Country_Region Text, '
                          'Lat Real, Long Real, Combined_Key Text, Population Integer'),
+        'hgis_data': ('Date Text, Place Text, Confirmed Integer, Dead Integer, '
+                      'Recovered Integer, Active Integer'),
         'files': ('filename Text, Source Text, dateProcessed Text')
             }
     dbdo.make_tables_from_dict(dbc, tabledefs, VERBOSE)
@@ -476,10 +478,50 @@ def field_types_from_schema(table):
     return field_types
 
 def read_hgis_data():
-    datadir = r'./JHU_data/2019-nCoV/csse_covid_19_data/csse_covid_19_daily_reports'
+    """ HGIS data is in one file:
+        first line has the fieldnames
+        each subsequent line has:
+            date (yyyy-mm-dd),A-B-C-D,...
+            Where:
+                A: Confirmed (includes all)
+                B: Active Confirmed
+                C: Recovered
+                D: Dead
+    """
+    datadir = r'./HGIS_UW_data'
     already_processed = dbdo.list_from_query(dbc, 'select filename from files;') 
     files = os.listdir(datadir)
+    dbdo.dbdo(dbc, 'BEGIN', VERBOSE)
+    for filename in files:
+        with open('{}/{}'.format(datadir, filename), 'r') as infh:
+            lines = list(infh)
 
+            # The first line contains the fields names, i.e. the datetime, then country
+            line = lines.pop(0)
+            line_fields = line.rstrip().split(r',')
+            norm_fields = normalise_fieldnames(line_fields)
+            print(line_fields, '\n', norm_fields)
+
+            for line in lines:
+                line_data = line.rstrip().split(r',')
+                # make a dict from the fields and the 
+                line_dict = {}
+                date = line_data[0] 
+                for key, value in zip(norm_fields, line_data):
+                    line_dict[key] = value
+                    cases = value.split(r'-')
+                    if len(cases)<4:
+                        cases = [0, 0, 0, 0]
+                    values = (date, key, ) + tuple(cases)
+
+                    fields = 'date, place, Confirmed, Active, Recovered, Dead'
+                    print(fields, ':', values)
+                    dbdo.dbdo_params(dbc, 
+                                     ('INSERT OR IGNORE INTO [hgis_data] ({}) '
+                                      'Values(?, ?, ?, ?, ?, ?)').format(fields), 
+                                     (values), VERBOSE)
+
+    dbdo.dbdo(dbc, 'COMMIT', VERBOSE)
     return None
 
 def normalise_fieldnames(line_fields):    
@@ -972,7 +1014,6 @@ def main():
         read_populations()
         read_generic_file(r'./JHU_data/2019-nCoV/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv', r'UID_ISO_FIPS' )
     
-    read_populations()
 
     if (UPDATE or FIRSTRUN):
         read_3g_dxy_cn_json()
