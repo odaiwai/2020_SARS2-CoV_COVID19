@@ -34,7 +34,7 @@ if ( $verbose ) {
 if ( $getters) {
 	my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
 					get_press_releases.pl get_disease_outbreak_news.pl 
-					get_hgis_data.sh /;
+					get_hgis_data.sh get_covid_buildings_list.py/;
 	
 	run_all_scripts(@getters);
 	# Run the JHU file separately as it requires a parameter
