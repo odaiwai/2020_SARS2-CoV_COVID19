@@ -14,8 +14,8 @@ __pycache__
 python_scripting.py
 .DS_Store
 gis
-plots/*
 !plots/Confirmed_since_start.png 
+plots/*
 urls.dat
 *.code-workspace
 temp.py
@@ -24,3 +24,4 @@ china_admin_boundaries.qgz
 query.sql
 chn_admbnda_adm2_ocha
 ._*.py
+modules/

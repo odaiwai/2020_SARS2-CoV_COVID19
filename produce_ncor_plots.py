@@ -37,9 +37,7 @@ def make_plot(title, dates, confirmed, dead, cured):
     return 0;
 
 def make_plots_from_dxy():
-    """ 
-    Make a plot by province:
-    """
+    # Make a plot by province:
     provinces = dbdo.list_from_query(dbc, 'select distinct(provinceName) from [cn_prov];')
     china_total_conf = {}
     china_total_date = {}
@@ -70,7 +68,7 @@ def make_plots_from_dxy():
             #time = datetime.datetime.strptime(date_str, '%H:%M:%S')
 
         #print (type(dates), dates)
-        make_plot(provincesce_en, dates, confirmed, dead, cured)
+        make_plot(province_en, dates, confirmed, dead, cured)
 
 
     #print (type(chinadates), chinadates)
@@ -118,10 +116,8 @@ def graph_definitions():
 def graph_definitions_as_dict():
     graphs = []
     graph_uuid = 0
-    """
-        TODO: add per population graph_definitions_as_dict
-    """
-    for column in 'Confirmed Recovered Deaths'.split():
+    # TODO: add per population graph_definitions_as_dict
+    for column in 'Confirmed Recovered Deaths Active'.split():
         if column == 'Deaths':
             limit = 1
         else:
@@ -180,7 +176,6 @@ def list_of_populations_by_country(countries):
             exit()
         populations[country] = population
     return populations
-
 
 def make_days_since_start_plot():
     #Make the rate of increase since N cases plot
@@ -444,8 +439,8 @@ def make_country_plots_from_jhu():
         ax.format_data = mdates.DateFormatter('%Y-%m-%d')
         fig.autofmt_xdate()
         ax.stackplot(dates, cure, sick, dead, 
-                     labels=['Recovered', 'Sick', 'Deaths'], 
-                     colors=['green', 'orange', 'black'])
+                     labels=['Recovered', 'Sick', 'Deaths', 'Active'], 
+                     colors=['green', 'orange', 'black', 'blue'])
         ax.legend(loc='upper left')
         
         # Annotate the final numbers
@@ -511,7 +506,8 @@ def make_days_since_start_plot_by_country():
     #
 
     graphs = graph_definitions_as_dict()
-    colours = {'Confirmed': 'orange', 'Deaths': 'black', 'Recovered': 'green'}
+    colours = {'Confirmed': 'orange', 'Deaths': 'black', 
+               'Recovered': 'green', 'Active': 'blue'}
     
     for country in countries:
         print(country)
@@ -607,11 +603,11 @@ def main():
     """
     Go through the download dir and collect all of the various data sources:
     """
+    #make_plots_from_dxy()
     make_days_since_start_plot()
     make_days_since_start_plot_by_country()
     make_country_plots_from_jhu()
     make_world_gridplots_from_jhu()
-    #make_plots_from_dxy()
     
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
