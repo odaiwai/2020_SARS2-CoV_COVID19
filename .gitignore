@@ -15,6 +15,7 @@ python_scripting.py
 .DS_Store
 gis
 !plots/Confirmed_since_start.png 
+!plots/Confirmed_new_since_start.png 
 plots/*
 urls.dat
 *.code-workspace

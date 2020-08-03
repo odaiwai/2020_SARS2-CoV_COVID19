@@ -4,6 +4,10 @@ This will produce images like below:
 
 ![Confirmed Cases since reporting started](./plots/Confirmed_since_start.png)
 
+and 
+
+![Confirmed New Cases since reporting started](./plots/Confirmed_new_since_start.png)
+
 
 
 # 2020 SARs-Cov / COVID 19
@@ -38,7 +42,7 @@ The WHO is usually behind the times. Trailing indicator.
 # 2020/03/11 - NOTES
  - This was started on the 5th of January, when initial reports of some sort of
    illness in Wuhan were started to appear in Hong Kong.  Hence the original name of the
-   repository, and many referenceis to Wuhan Coronvirus, etc.  
+   repository, and many references to Wuhan Coronvirus, etc.  
  - I've changed it now, as a certain US President is doubling down on using it
    to stoke up racial resentment propaganda.
 
