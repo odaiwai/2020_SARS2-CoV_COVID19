@@ -4,6 +4,10 @@ This will produce images like below:
 
 ![Confirmed Cases since reporting started](./plots/Confirmed_since_start.png)
 
+and 
+
+![Confirmed New Cases since reporting started](./plots/Confirmed_new_since_start.png)
+
 
 
 # 2020 SARs-Cov / COVID 19
