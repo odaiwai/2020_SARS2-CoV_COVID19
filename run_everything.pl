@@ -40,7 +40,8 @@ if ( $getters) {
 	# Run the JHU file separately as it requires a parameter
 	`./process_ncor_2019_data.py >>$logfile 2>>$logfile`;
 	`./produce_ncor_plots.py >>$logfile 2>>$logfile`;
-	`git add -f plots/Confirmed_new_since_start.png && git commit -m "Updated main plot" plots/Confirmed_new_since_start.png`;
+	`git add -f plots/Confirmed_since_start.png && git commit -m "Updated main plot" plots/Confirmed_since_start.png`;
+	`git add -f plots/Confirmed_new_since_start.png && git commit -m "Updated main new plot" plots/Confirmed_new_since_start.png`;
 }
 
 #run_all_scripts(@parsers);
