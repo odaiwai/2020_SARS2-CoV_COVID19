@@ -1,0 +1,204 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+By	get_3gdxy_data.py	/^from selenium.webdriver.common.by import By$/;"	i
+DATADIR	get_3gdxy_json.py	/^    DATADIR = '01_download_data\/'$/;"	v
+DATADIR	normalise_downloads.py	/^    DATADIR = '01_download_data'$/;"	v
+FIRSTRUN	get_covid_buildings_list.py	/^    FIRSTRUN = False$/;"	v
+FIRSTRUN	get_immd_data.py	/^    FIRSTRUN = 1$/;"	v
+FIRSTRUN	produce_nid_plots.py	/^    FIRSTRUN = 0$/;"	v
+Keys	get_3gdxy_data.py	/^from selenium.webdriver.common.keys import Keys$/;"	i
+LOCALE	get_apple_mobility_data.py	/^    LOCALE = 'en-us'$/;"	v
+LOGFILE	get_3gdxy_json.py	/^    LOGFILE = os.getcwd() + '\/get_3gdxy_cn.log'$/;"	v
+Options	get_3gdxy_data.py	/^from selenium.webdriver.firefox.options import Options$/;"	i
+This	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+This	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+This	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+VERBOSE	get_3gdxy_json.py	/^    VERBOSE = 0$/;"	v
+VERBOSE	get_immd_data.py	/^    VERBOSE = 1$/;"	v
+WebDriverWait	get_3gdxy_data.py	/^from selenium.webdriver.support.ui import WebDriverWait$/;"	i
+a	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+a	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+a	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+admin1_from_abbr	process_ncor_2019_data.py	/^def admin1_from_abbr(abbr):$/;"	f
+ax2	produce_nid_plots.py	/^        ax2 = ax.twinx()$/;"	v
+axis_range	produce_nid_plots.py	/^    axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]$/;"	v
+cagr	process_ncor_2019_data.py	/^def cagr(value1, value2, interval):$/;"	f
+cases	produce_nid_plots.py	/^        cases = dbdo.list_from_query($/;"	v
+check	produce_nid_plots.py	/^    check = dbdo.list_from_query($/;"	v
+column_headings	get_immd_data.py	/^def column_headings():$/;"	f
+database	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+database	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+database	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+date	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+date	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+date	produce_nid_plots.py	/^        date = datetime.datetime(int(year), int(month), int(day), 12, 0)$/;"	v
+date_strs	produce_nid_plots.py	/^    date_strs = dbdo.list_from_query($/;"	v
+dates	produce_nid_plots.py	/^    dates = []$/;"	v
+datetime	get_3gdxy_data.py	/^import os, sys, re, datetime$/;"	i
+datetime	get_3gdxy_json.py	/^import datetime$/;"	i
+datetime	get_covid_buildings_list.py	/^import datetime$/;"	i
+datetime	get_immd_data.py	/^import datetime$/;"	i
+datetime	normalise_downloads.py	/^import datetime$/;"	i
+datetime	process_ncor_2019_data.py	/^import datetime$/;"	i
+datetime	produce_ncor_plots.py	/^import datetime$/;"	i
+datetime	produce_nid_plots.py	/^import datetime$/;"	i
+db_connect	get_immd_data.py	/^    db_connect = sqlite3.connect(r'immd.sqlite')$/;"	v
+db_connect	produce_nid_plots.py	/^    db_connect = sqlite3.connect('notifiable_infections_diseases.sqlite')$/;"	v
+dbc	get_immd_data.py	/^    dbc = db_connect.cursor()$/;"	v
+dbc	produce_nid_plots.py	/^    dbc = db_connect.cursor()$/;"	v
+dbdo	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+dbdo	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+dbdo	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+dbdo	produce_nid_plots.py	/^import db_helper as dbdo$/;"	i
+digits_from_words	process_press_releases.pl	/^sub digits_from_words {$/;"	s
+disease_full_names	produce_nid_plots.py	/^    disease_full_names = dbdo.dict_from_query($/;"	v
+diseases	produce_nid_plots.py	/^    diseases = dbdo.list_from_query(dbc, 'select distinct(ref) from diseases;')$/;"	v
+escaped_list	process_ncor_2019_data.py	/^def escaped_list(list):$/;"	f
+field_types_from_schema	process_ncor_2019_data.py	/^def field_types_from_schema(table):$/;"	f
+filenames	normalise_downloads.py	/^    filenames = os.listdir(DATADIR)$/;"	v
+for	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+for	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+formatting	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+formatting	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+get_all	get_covid_buildings_list.py	/^def get_all():$/;"	f
+get_all_data_for_day	get_immd_data.py	/^def get_all_data_for_day(date):$/;"	f
+get_all_data_in_range	get_immd_data.py	/^def get_all_data_in_range(from_date, to_date):$/;"	f
+get_one	get_covid_buildings_list.py	/^def get_one(timestamp):$/;"	f
+graph_definitions	produce_ncor_plots.py	/^def graph_definitions():$/;"	f
+graph_definitions_as_dict	produce_ncor_plots.py	/^def graph_definitions_as_dict():$/;"	f
+hex_from_string	process_nid_data.pl	/^sub hex_from_string {$/;"	s
+hk_pop	produce_nid_plots.py	/^    hk_pop = hk_population()$/;"	v
+hk_pop_dates	produce_nid_plots.py	/^    hk_pop_dates = []$/;"	v
+hk_pop_values	produce_nid_plots.py	/^    hk_pop_values = []$/;"	v
+hk_population	produce_nid_plots.py	/^def hk_population():$/;"	f
+is	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+is	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+is	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+it	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+it	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+it	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+json	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
+json	get_apple_mobility_data.py	/^import json$/;"	i
+json	process_ncor_2019_data.py	/^import json$/;"	i
+json	produce_ncor_plots.py	/^import json$/;"	i
+just	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+just	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+just	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+keys_values_as_lists_from_dict	produce_ncor_plots.py	/^def keys_values_as_lists_from_dict(dict):    $/;"	f
+library	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+library	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+library	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+list_of_countries_by_confirmed	produce_ncor_plots.py	/^def list_of_countries_by_confirmed(final_date_str):$/;"	f
+list_of_populations_by_country	produce_ncor_plots.py	/^def list_of_populations_by_country(countries):$/;"	f
+main	get_3gdxy_json.py	/^def main():$/;"	f
+main	get_apple_mobility_data.py	/^def main():$/;"	f
+main	get_covid_buildings_list.py	/^def main():$/;"	f
+main	get_immd_data.py	/^def main():$/;"	f
+main	process_ncor_2019_data.py	/^def main():$/;"	f
+main	produce_ncor_plots.py	/^def main():$/;"	f
+make_country_plots_from_jhu	produce_ncor_plots.py	/^def make_country_plots_from_jhu():$/;"	f
+make_database	get_immd_data.py	/^def make_database():$/;"	f
+make_days_since_start_plot	produce_ncor_plots.py	/^def make_days_since_start_plot():$/;"	f
+make_days_since_start_plot_by_country	produce_ncor_plots.py	/^def make_days_since_start_plot_by_country():$/;"	f
+make_plot	produce_ncor_plots.py	/^def make_plot(title, dates, confirmed, dead, cured):$/;"	f
+make_plots_from_dxy	produce_ncor_plots.py	/^def make_plots_from_dxy():$/;"	f
+make_summary_tables	process_ncor_2019_data.py	/^def make_summary_tables():$/;"	f
+make_table_of_disease_by_month	produce_nid_plots.py	/^def make_table_of_disease_by_month():$/;"	f
+make_tables	process_ncor_2019_data.py	/^def make_tables():$/;"	f
+make_world_gridplots_from_jhu	produce_ncor_plots.py	/^def make_world_gridplots_from_jhu():$/;"	f
+match	normalise_downloads.py	/^        match = shortdate1_re.match(filename)$/;"	v
+match	normalise_downloads.py	/^        match = shortdate2_re.match(filename)$/;"	v
+math	produce_ncor_plots.py	/^import math$/;"	i
+matplotlib	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+matplotlib	get_apple_mobility_data.py	/^import matplotlib.pyplot as plt$/;"	i
+matplotlib	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+matplotlib	produce_ncor_plots.py	/^import matplotlib.pyplot as plt$/;"	i
+matplotlib	produce_nid_plots.py	/^import matplotlib.pyplot as plt$/;"	i
+max	process_press_releases.pl	/^sub max {$/;"	s
+mdates	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+mdates	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
+mpl	get_apple_mobility_data.py	/^import matplotlib as mpl$/;"	i
+mpl	produce_ncor_plots.py	/^import matplotlib as mpl$/;"	i
+my	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+my	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+my	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+newfile	normalise_downloads.py	/^            newfile = '{}\/20{}{}{}_{}'.format(DATADIR, match[1], match[2], match[3], match[4])$/;"	v
+newfile	normalise_downloads.py	/^            newfile = '{}\/{}_20{}{}{}_{}'.format(DATADIR, match[1], match[2], match[3], match[4], match[5])$/;"	v
+normalise_countries	process_ncor_2019_data.py	/^def normalise_countries(country):$/;"	f
+normalise_fieldnames	process_ncor_2019_data.py	/^def normalise_fieldnames(line_fields):    $/;"	f
+np	produce_nid_plots.py	/^import numpy as np$/;"	i
+of	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+of	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+of	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+oldfile	normalise_downloads.py	/^            oldfile = '{}\/{}'.format(DATADIR, filename)$/;"	v
+os	get_3gdxy_data.py	/^import os, sys, re, datetime$/;"	i
+os	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
+os	get_apple_mobility_data.py	/^import os$/;"	i
+os	normalise_downloads.py	/^import os, sys, re$/;"	i
+os	process_ncor_2019_data.py	/^import os$/;"	i
+os	produce_ncor_plots.py	/^import os$/;"	i
+own	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+own	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+own	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+pd	produce_nid_plots.py	/^import pandas as pd$/;"	i
+plt	get_apple_mobility_data.py	/^import matplotlib.pyplot as plt$/;"	i
+plt	produce_ncor_plots.py	/^import matplotlib.pyplot as plt$/;"	i
+plt	produce_nid_plots.py	/^import matplotlib.pyplot as plt$/;"	i
+presence_of_element_located	get_3gdxy_data.py	/^from selenium.webdriver.support.expected_conditions import presence_of_element_located$/;"	i
+printlog	get_3gdxy_json.py	/^def printlog(*arguments):$/;"	f
+process_file	process_press_releases.pl	/^sub process_file {$/;"	s
+quoted_if_required	process_ncor_2019_data.py	/^def quoted_if_required(string):$/;"	f
+re	get_3gdxy_data.py	/^import os, sys, re, datetime$/;"	i
+re	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
+re	get_immd_data.py	/^import re$/;"	i
+re	normalise_downloads.py	/^import os, sys, re$/;"	i
+re	process_ncor_2019_data.py	/^import re$/;"	i
+re	produce_ncor_plots.py	/^import re$/;"	i
+re	produce_nid_plots.py	/^import re$/;"	i
+read_3g_dxy_cn_json	process_ncor_2019_data.py	/^def read_3g_dxy_cn_json():$/;"	f
+read_china_places	process_ncor_2019_data.py	/^def read_china_places():$/;"	f
+read_generic_file	process_ncor_2019_data.py	/^def read_generic_file(datafile, table_name):$/;"	f
+read_hgis_data	process_ncor_2019_data.py	/^def read_hgis_data():$/;"	f
+read_hksarg_pr	process_ncor_2019_data.py	/^def read_hksarg_pr():$/;"	f
+read_jhu_data	process_ncor_2019_data.py	/^def read_jhu_data():$/;"	f
+read_jhu_us_data	process_ncor_2019_data.py	/^def  read_jhu_us_data():$/;"	f
+read_populations	process_ncor_2019_data.py	/^def read_populations():$/;"	f
+read_un_places	process_ncor_2019_data.py	/^def read_un_places():$/;"	f
+register_matplotlib_converters	produce_nid_plots.py	/^from pandas.plotting import register_matplotlib_converters$/;"	i
+requests	get_3gdxy_json.py	/^import requests$/;"	i
+requests	get_apple_mobility_data.py	/^import requests$/;"	i
+requests	get_immd_data.py	/^import requests$/;"	i
+results	get_immd_data.py	/^    results = main()$/;"	v
+routines	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+routines	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+routines	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+run_all_scripts	run_everything.pl	/^sub run_all_scripts {$/;"	s
+safe_list_for_tablenames	process_ncor_2019_data.py	/^def safe_list_for_tablenames(given_list):$/;"	f
+sanitise_text	process_press_releases.pl	/^sub sanitise_text {$/;"	s
+sanitise_url	get_disease_outbreak_news.pl	/^sub sanitise_url {$/;"	s
+sanitised_line	process_nid_data.pl	/^sub sanitised_line {$/;"	s
+shortdate1_re	normalise_downloads.py	/^    shortdate1_re = re.compile(r'^([0-9]{2})([0-9]{2})([0-9]{2})_(.*)$')$/;"	v
+shortdate2_re	normalise_downloads.py	/^    shortdate2_re = re.compile(r'^(3g_dxy_cn)_([0-9]{2})([0-9]{2})([0-9]{2})_(.*)$')$/;"	v
+show_me_all	get_3gdxy_data.py	/^def show_me_all(webelements_list):$/;"	f
+sqlite3	get_3gdxy_json.py	/^import sqlite3$/;"	i
+sqlite3	get_immd_data.py	/^import sqlite3$/;"	i
+sqlite3	process_ncor_2019_data.py	/^import sqlite3$/;"	i
+sqlite3	produce_ncor_plots.py	/^import sqlite3$/;"	i
+sqlite3	produce_nid_plots.py	/^import sqlite3$/;"	i
+subprocess	get_covid_buildings_list.py	/^import subprocess$/;"	i
+sys	get_3gdxy_data.py	/^import os, sys, re, datetime$/;"	i
+sys	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
+sys	get_immd_data.py	/^import sys$/;"	i
+sys	normalise_downloads.py	/^import os, sys, re$/;"	i
+sys	process_ncor_2019_data.py	/^import sys$/;"	i
+sys	produce_ncor_plots.py	/^import sys$/;"	i
+sys	produce_nid_plots.py	/^import sys$/;"	i
+top_and_tail	get_3gdxy_json.py	/^def top_and_tail(string, width):$/;"	f
+wait_for_keypress	process_press_releases.pl	/^sub wait_for_keypress {$/;"	s
+walk_province_data	get_3gdxy_json.py	/^def walk_province_data(outfile, area_stats):$/;"	f
+webdriver	get_3gdxy_data.py	/^from selenium import webdriver$/;"	i
+ylabel	produce_nid_plots.py	/^               ylabel='Reported Cases per month')$/;"	v

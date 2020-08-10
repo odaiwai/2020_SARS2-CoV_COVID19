@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
     Track the Immigration data from Immd
-    Typical age: https://www.immd.gov.hk/eng/stat_20200124.html
+    Typical page: https://www.immd.gov.hk/eng/stat_20200124.html
 """
 import requests
 import datetime
