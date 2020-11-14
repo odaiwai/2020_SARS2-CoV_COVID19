@@ -180,6 +180,8 @@ def list_of_populations_by_country(countries):
 def make_days_since_start_plot():
     #Make the rate of increase since N cases plot
     # with all the countries
+    GRAPH_DAYS = True
+    GRAPH_DATES = False
 
     # Style and Attributions text
     box = dict(boxstyle = 'round', fc='#ffffffff')
@@ -195,8 +197,14 @@ def make_days_since_start_plot():
     final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     start_date = datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M')
     final_date = datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M') + datetime.timedelta(days = 7)
+
+    # The Axis Range depends on Days or Dates
+    # Default is for DAYS
     max_days = (final_date - start_date).days
     axis_range = [1, max_days] # x-axis
+    if GRAPH_DATES:
+        axis_range = [start_date, final_date] # x-axis
+
     countries = list_of_countries_by_confirmed(final_date_str)
     countries.remove('World')
     countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 

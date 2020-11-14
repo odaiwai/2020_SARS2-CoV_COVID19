@@ -34,11 +34,19 @@ if ( $verbose ) {
 if ( $getters) {
 	my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
 					get_press_releases.pl get_disease_outbreak_news.pl 
-					get_hgis_data.sh get_covid_buildings_list.py/;
+					get_hgis_data.sh get_covid_buildings_list.py 
+					get_immd_data.py/;
 	
 	run_all_scripts(@getters);
-	# Run the JHU file separately as it requires a parameter
-	`./process_ncor_2019_data.py >>$logfile 2>>$logfile`;
+	# Process the plots
+	my $result = `./process_ncor_2019_data.py >>$logfile 2>>$logfile`;
+	my $finish_code = `echo \$# `;
+	#print "$finish_code";
+	if ( $finish_code != 0 ) {
+		print "$result";
+	}
+
+	# Produce the Plots
 	`./produce_ncor_plots.py >>$logfile 2>>$logfile`;
 	`git add -f plots/Confirmed_since_start.png && git commit -m "Updated main plot" plots/Confirmed_since_start.png`;
 	`git add -f plots/Confirmed_new_since_start.png && git commit -m "Updated main new plot" plots/Confirmed_new_since_start.png`;

@@ -102,8 +102,8 @@ def main():
 
 if __name__ == '__main__':
     # constants
-    FIRSTRUN = 1
-    VERBOSE = 1
+    FIRSTRUN = 0
+    VERBOSE = 0
 
     db_connect = sqlite3.connect(r'immd.sqlite')
     dbc = db_connect.cursor()

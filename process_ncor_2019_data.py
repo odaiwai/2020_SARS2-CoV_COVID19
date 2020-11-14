@@ -57,16 +57,19 @@ def make_tables():
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
                     'curedCount Integer'),
         'jhu_data': ('Timestamp Integer, Date Text, '
-                    'FIPS Integer, Admin2 Text, Country Text, Province Text, ' # Admin2 is county or city
-                    'Last_Update Text, incident_rate Real, People_tested Integer, People_hospitalized Integer, '
-                    'Confirmed Integer, Deaths Integer, Recovered Integer, Active Integer, '
-                    'Latitude Real, Longitude Real, Combined_Key Text, comment Text',
-                    'Incidence_Rate Real, Case_Fatality_ratio Real'),
+                     'FIPS Integer, Admin2 Text, Country Text, Province Text, '
+                     'Last_Update Text, incident_rate Real, '
+                     'People_tested Integer, People_hospitalized Integer, '
+                     'Confirmed Integer, Deaths Integer, Recovered Integer, '
+                     'Active Integer, Latitude Real, Longitude Real, '
+                     'Combined_Key Text, comment Text, '
+                     'Incidence_Rate Real, Case_Fatality_ratio Real'),
         'jhu_us_data': ('Timestamp Integer, Date Text, Province Text, Country Text, '
                         'Last_Update Text, Latitude Real, Longitude Real, '
                         'Confirmed Integer, Deaths Integer, Recovered Integer, '
                         'Active Integer, FIPS Integer, Incident_rate Real, '
-                        'People_tested Integer, People_hospitalized Integer, '
+                        'Total_Test_Results Integer, People_tested Integer, '
+                        'People_hospitalized Integer, case_fatality_ratio Real, '
                         'Mortality_Rate Real, UID Integer, ISO3 Integer, '
                         'Testing_Rate Real, Hospitalization_Rate Real'),
         'places': ('OBJECTID Int UNIQUE Primary Key, ADMIN_TYPE Text, ADM2_CAP Text, '
@@ -83,10 +86,10 @@ def make_tables():
                         'Migrants Integer, Fert_rate Real, median_age Integer, Urban_pct Real, '
                         'world_pct Real'),
         'wiki_populations': ('id text, country text, population integer, '
-                             'pct_global text, date text, source text alt_name Text'),
+                             'pct_global text, date text, source text, alt_name Text'),
         'UID_ISO_FIPS': ('UID Integer, iso2 Text, iso3 Text, code3 Integer, FIPS Text, '
-                         'Admin2 Text, Province_State Text, Country_Region Text, '
-                         'Lat Real, Long Real, Combined_Key Text, Population Integer'),
+                         'Admin2 Text, Province Text, Country Text, '
+                         'Latitude Real, Longitude Real, Combined_Key Text, Population Integer'),
         'hgis_data': ('Date Text, Place Text, Confirmed Integer, Dead Integer, '
                       'Recovered Integer, Active Integer'),
         'files': ('filename Text, Source Text, dateProcessed Text')
@@ -99,7 +102,7 @@ def cagr(value1, value2, interval):
     """
     value1 = float(value1)
     value2 = float(value2)
-    if value2 == 0 or interval == 0:
+    if value2 <= 0 or interval <= 0:
         cagr = -1
     else:
         cagr = ((value1/value2) ** (1/interval))-1
@@ -541,7 +544,7 @@ def normalise_fieldnames(line_fields):
             norm_fields.append(field.lower())
     return norm_fields
  
-def  read_jhu_us_data():
+def read_jhu_us_data():
     """ Read in the US specific data from JHU - this has Testing and Hospitalization 
         Rates in it
     """

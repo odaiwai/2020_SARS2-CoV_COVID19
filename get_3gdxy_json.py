@@ -153,6 +153,10 @@ if __name__ == '__main__':
     DATADIR = '01_download_data/'
     VERBOSE = 0
     LOGFILE = os.getcwd() + '/get_3gdxy_cn.log'
+    # Open the Logfile and write a blank char to it. - stops it growing over time.
+    with open(LOGFILE, 'w') as outfh:
+        outfh.write('')
+
 
     main()
  
