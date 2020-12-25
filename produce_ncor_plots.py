@@ -524,7 +524,7 @@ def make_days_since_start_plot_by_country():
 
         suptitle = 'COVID 19 Cases in {}'.format(country)
         fig.suptitle(suptitle)
-        ax.set(title = '{}: cases since Reporting started'.format(country))
+        ax.set(title = '{}: cases since Reporting started to {}'.format(country, final_date_str))
         ax.set(xlabel='Days since reporting Started', xlim = axis_range, ylabel='Cases')
         fig.autofmt_xdate()
         # configure the Y-Axis

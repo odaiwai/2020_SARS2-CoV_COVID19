@@ -8,7 +8,7 @@ By	get_3gdxy_data.py	/^from selenium.webdriver.common.by import By$/;"	i
 DATADIR	get_3gdxy_json.py	/^    DATADIR = '01_download_data\/'$/;"	v
 DATADIR	normalise_downloads.py	/^    DATADIR = '01_download_data'$/;"	v
 FIRSTRUN	get_covid_buildings_list.py	/^    FIRSTRUN = False$/;"	v
-FIRSTRUN	get_immd_data.py	/^    FIRSTRUN = 1$/;"	v
+FIRSTRUN	get_immd_data.py	/^    FIRSTRUN = 0$/;"	v
 FIRSTRUN	produce_nid_plots.py	/^    FIRSTRUN = 0$/;"	v
 Keys	get_3gdxy_data.py	/^from selenium.webdriver.common.keys import Keys$/;"	i
 LOCALE	get_apple_mobility_data.py	/^    LOCALE = 'en-us'$/;"	v
@@ -18,7 +18,7 @@ This	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own d
 This	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 This	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 VERBOSE	get_3gdxy_json.py	/^    VERBOSE = 0$/;"	v
-VERBOSE	get_immd_data.py	/^    VERBOSE = 1$/;"	v
+VERBOSE	get_immd_data.py	/^    VERBOSE = 0$/;"	v
 WebDriverWait	get_3gdxy_data.py	/^from selenium.webdriver.support.ui import WebDriverWait$/;"	i
 a	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 a	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
@@ -165,7 +165,7 @@ read_generic_file	process_ncor_2019_data.py	/^def read_generic_file(datafile, ta
 read_hgis_data	process_ncor_2019_data.py	/^def read_hgis_data():$/;"	f
 read_hksarg_pr	process_ncor_2019_data.py	/^def read_hksarg_pr():$/;"	f
 read_jhu_data	process_ncor_2019_data.py	/^def read_jhu_data():$/;"	f
-read_jhu_us_data	process_ncor_2019_data.py	/^def  read_jhu_us_data():$/;"	f
+read_jhu_us_data	process_ncor_2019_data.py	/^def read_jhu_us_data():$/;"	f
 read_populations	process_ncor_2019_data.py	/^def read_populations():$/;"	f
 read_un_places	process_ncor_2019_data.py	/^def read_un_places():$/;"	f
 register_matplotlib_converters	produce_nid_plots.py	/^from pandas.plotting import register_matplotlib_converters$/;"	i
