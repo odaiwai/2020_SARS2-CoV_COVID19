@@ -424,7 +424,7 @@ def make_country_plots_from_jhu():
         c7d  = dbdo.list_from_query(dbc, 'SELECT C7Day from [{}] order by Date'.format(country))
         d7d  = dbdo.list_from_query(dbc, 'SELECT D7Day from [{}] order by Date'.format(country))
         d1d  = dbdo.list_from_query(dbc, 'SELECT D1Day from [{}] order by Date'.format(country))
-        print (country, conf[-1], cure[-1], sick[-1], dead[-1], cfr[-1])
+        print (country, final_date_str, conf[-1], cure[-1], sick[-1], dead[-1], cfr[-1])
         for index in range(0,len(d1d)):
             if type(d1d[index]) == None:
                 d1d[index] = 0 
@@ -518,7 +518,7 @@ def make_days_since_start_plot_by_country():
                'Recovered': 'green', 'Active': 'blue'}
     
     for country in countries:
-        print(country)
+        print(country, start_date_str, '->', final_date_str)
         fig = plt.figure(figsize=FIGSIZE)
         ax = plt.axes([0.1, 0.15, 0.85, 0.75])
 
@@ -532,7 +532,6 @@ def make_days_since_start_plot_by_country():
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         #max_cases = 0
         zord = 10 #
-        print (country)
         for graph in graphs:
             col = colours[graph['column']]
             # we want to have dates in here...

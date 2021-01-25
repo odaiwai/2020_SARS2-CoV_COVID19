@@ -50,12 +50,15 @@ def make_tables():
                     'ProvinceName Text, Province_EN Text, confirmedCount Integer, '
                     'suspectedCount Integer, deadCount Integer, curedCount Integer, '
                     'LocationID Integer, Comment Text, provinceShortName Text, '
-                    'currentConfirmedCount Integer, statisticsData Text'),
+                    'currentConfirmedCount Integer, statisticsData Text, '
+                    'highDangerCount Int midDangerCount Int, detectOrgCount Int, '
+                    'vaccinationOrgCount Int, dangerAreas Text' ),
         'cn_city': ('Timestamp Integer, ISO_Date Text, '
                     'ProvinceName Text, Province_EN Text, CityName Text, City_EN Text, '
                     'currentConfirmedCount Integer, suspectedCount Integer, '
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
-                    'curedCount Integer'),
+                    'curedCount Integer, highDangerCount Int midDangerCount Int, '
+                    'detectOrgCount Int, cavvinationOrgCount Int, dangerAreas Text'),
         'jhu_data': ('Timestamp Integer, Date Text, '
                      'FIPS Integer, Admin2 Text, Country Text, Province Text, '
                      'Last_Update Text, incident_rate Real, '
@@ -713,8 +716,8 @@ def read_jhu_data():
     print('Reading () CSSE data'.format(source))
     # precompile some regular expressions...
     namedate = re.compile(r'^([0-9]{2})-([0-9]{2})-([0-9]{4}).csv$')
-    mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)$')
-    ymd_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]([0-9]{2}):([0-9]{2}):([0-9]{2})$')
+    mdy_date = re.compile(r'^([0-9]+)/([0-9]+)/([0-9]{2,4}) ([0-9]+):([0-9]+)')
+    ymd_date = re.compile(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})[T ]+([0-9]{2}):([0-9]{2})')
     city_state = re.compile(r'^(.*?)\#\s*(.*)') # split '"Tempe# AZ", a, b, c' with 'Tempe_AZ, a, b, c'
     # replaces '""Alleghany, North Carolina, US", a, b, c' with 'Alleghany.North.Carolina.US, a, b, c'
     fixcckey = re.compile(r'"([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)#\s*([A-Za-z. ]+?)"') 
@@ -796,6 +799,7 @@ def read_jhu_data():
                     # Date of last update:
                     # check which form the date is in: There's a MDY format and there's a proper ISO
                     update   = line_dict['last_update']
+                    print('update', update)
                     last_update = 'NULL' # So we can catch it if it falls 
                      # Trap the null set
                     if update == '':
@@ -807,11 +811,13 @@ def read_jhu_data():
                         if year < 100:
                             year = 2000 + year
                         last_update = datetime.datetime(year, int(match[1]), int(match[2]), int(match[4]), int(match[5]), 0)
+                        print('mdy last update:', last_update)
                     else:
                         match = ymd_date.match(update)
                         if match:
                             print(match)
-                            last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), int(match[6]))
+                            last_update = datetime.datetime(int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), 0)
+                            print('ymd last update:', last_update)
                     timestamp = last_update.strftime('%Y%m%d%H%M%S')
                     if last_update == 'NULL':    
                         print('BARF!', update)

@@ -39,17 +39,25 @@ if ( $getters) {
 	
 	run_all_scripts(@getters);
 	# Process the plots
-	my $result = `./process_ncor_2019_data.py >>$logfile 2>>$logfile`;
+	my $result = `./process_ncor_2019_data.py $options >>$logfile 2>>$logfile`;
 	my $finish_code = `echo \$# `;
 	#print "$finish_code";
 	if ( $finish_code != 0 ) {
 		print "$result";
+		exit;
 	}
 
 	# Produce the Plots
-	`./produce_ncor_plots.py >>$logfile 2>>$logfile`;
-	`git add -f plots/Confirmed_since_start.png && git commit -m "Updated main plot" plots/Confirmed_since_start.png`;
-	`git add -f plots/Confirmed_new_since_start.png && git commit -m "Updated main new plot" plots/Confirmed_new_since_start.png`;
+	$result = `./produce_ncor_plots.py $options >>$logfile 2>>$logfile`;
+	$finish_code = `echo \$# `;
+	#print "$finish_code";
+	if ( $finish_code != 0 ) {
+		print "$result";
+		exit;
+	} else {
+		`git add -f plots/Confirmed_since_start.png && git commit -m "Updated main plot" plots/Confirmed_since_start.png`;
+		`git add -f plots/Confirmed_new_since_start.png && git commit -m "Updated main new plot" plots/Confirmed_new_since_start.png`;
+	}
 }
 
 #run_all_scripts(@parsers);
@@ -87,7 +95,12 @@ sub run_all_scripts {
 		chomp $script;
 		print "Running $script $options...\n" if $verbose;
 		my $result = `./$script $options >>$logfile 2>>$logfile`;
-		print "$result\n" if $verbose;
+		my $finish_code = `echo \$# `;
+		#print "$finish_code";
+		if ( $finish_code != 0 or $verbose ) {
+			print "$result";
+			exit;
+		}
 		$results ++;
 	}
 
