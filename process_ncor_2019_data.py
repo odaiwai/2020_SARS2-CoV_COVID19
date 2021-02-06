@@ -52,13 +52,15 @@ def make_tables():
                     'LocationID Integer, Comment Text, provinceShortName Text, '
                     'currentConfirmedCount Integer, statisticsData Text, '
                     'highDangerCount Int midDangerCount Int, detectOrgCount Int, '
-                    'vaccinationOrgCount Int, dangerAreas Text' ),
+                    'vaccinationOrgCount Int, dangerAreas Text, ' 
+                    'notShowCurrentConfirmedCount Text, currentConfirmedCountStr Text' ), 
         'cn_city': ('Timestamp Integer, ISO_Date Text, '
                     'ProvinceName Text, Province_EN Text, CityName Text, City_EN Text, '
                     'currentConfirmedCount Integer, suspectedCount Integer, '
                     'deadCount Integer, LocationID Integer, confirmedCount Integer, '
                     'curedCount Integer, highDangerCount Int midDangerCount Int, '
-                    'detectOrgCount Int, cavvinationOrgCount Int, dangerAreas Text'),
+                    'detectOrgCount Int, cavvinationOrgCount Int, dangerAreas Text, '
+                    'notShowCurrentConfirmedCount Text, currentConfirmedCountStr Text' ),
         'jhu_data': ('Timestamp Integer, Date Text, '
                      'FIPS Integer, Admin2 Text, Country Text, Province Text, '
                      'Last_Update Text, incident_rate Real, '
