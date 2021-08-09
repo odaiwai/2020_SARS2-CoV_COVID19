@@ -16,13 +16,13 @@ LOGFILE	get_3gdxy_json.py	/^    LOGFILE = os.getcwd() + '\/get_3gdxy_cn.log'$/;"
 Options	get_3gdxy_data.py	/^from selenium.webdriver.firefox.options import Options$/;"	i
 This	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 This	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-This	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+This	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 VERBOSE	get_3gdxy_json.py	/^    VERBOSE = 0$/;"	v
 VERBOSE	get_immd_data.py	/^    VERBOSE = 0$/;"	v
 WebDriverWait	get_3gdxy_data.py	/^from selenium.webdriver.support.ui import WebDriverWait$/;"	i
 a	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 a	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-a	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+a	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 admin1_from_abbr	process_ncor_2019_data.py	/^def admin1_from_abbr(abbr):$/;"	f
 ax2	produce_nid_plots.py	/^        ax2 = ax.twinx()$/;"	v
 axis_range	produce_nid_plots.py	/^    axis_range = [datetime.datetime(1997, 1, 1), datetime.datetime(2020, 1, 1)]$/;"	v
@@ -32,7 +32,7 @@ check	produce_nid_plots.py	/^    check = dbdo.list_from_query($/;"	v
 column_headings	get_immd_data.py	/^def column_headings():$/;"	f
 database	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 database	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-database	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+database	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 date	get_apple_mobility_data.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
 date	produce_ncor_plots.py	/^import matplotlib.dates as mdates # for date formatting$/;"	i
 date	produce_nid_plots.py	/^        date = datetime.datetime(int(year), int(month), int(day), 12, 0)$/;"	v
@@ -52,7 +52,7 @@ dbc	get_immd_data.py	/^    dbc = db_connect.cursor()$/;"	v
 dbc	produce_nid_plots.py	/^    dbc = db_connect.cursor()$/;"	v
 dbdo	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 dbdo	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-dbdo	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+dbdo	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 dbdo	produce_nid_plots.py	/^import db_helper as dbdo$/;"	i
 digits_from_words	process_press_releases.pl	/^sub digits_from_words {$/;"	s
 disease_full_names	produce_nid_plots.py	/^    disease_full_names = dbdo.dict_from_query($/;"	v
@@ -77,21 +77,18 @@ hk_pop_values	produce_nid_plots.py	/^    hk_pop_values = []$/;"	v
 hk_population	produce_nid_plots.py	/^def hk_population():$/;"	f
 is	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 is	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-is	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+is	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 it	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 it	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-it	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 json	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
 json	get_apple_mobility_data.py	/^import json$/;"	i
 json	process_ncor_2019_data.py	/^import json$/;"	i
-json	produce_ncor_plots.py	/^import json$/;"	i
 just	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 just	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-just	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-keys_values_as_lists_from_dict	produce_ncor_plots.py	/^def keys_values_as_lists_from_dict(dict):    $/;"	f
+keys_values_as_lists_from_dict	produce_ncor_plots.py	/^def keys_values_as_lists_from_dict(dict):$/;"	f
 library	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 library	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-library	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+library	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 list_of_countries_by_confirmed	produce_ncor_plots.py	/^def list_of_countries_by_confirmed(final_date_str):$/;"	f
 list_of_populations_by_country	produce_ncor_plots.py	/^def list_of_populations_by_country(countries):$/;"	f
 main	get_3gdxy_json.py	/^def main():$/;"	f
@@ -125,7 +122,7 @@ mpl	get_apple_mobility_data.py	/^import matplotlib as mpl$/;"	i
 mpl	produce_ncor_plots.py	/^import matplotlib as mpl$/;"	i
 my	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 my	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-my	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+my	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 newfile	normalise_downloads.py	/^            newfile = '{}\/20{}{}{}_{}'.format(DATADIR, match[1], match[2], match[3], match[4])$/;"	v
 newfile	normalise_downloads.py	/^            newfile = '{}\/{}_20{}{}{}_{}'.format(DATADIR, match[1], match[2], match[3], match[4], match[5])$/;"	v
 normalise_countries	process_ncor_2019_data.py	/^def normalise_countries(country):$/;"	f
@@ -133,17 +130,16 @@ normalise_fieldnames	process_ncor_2019_data.py	/^def normalise_fieldnames(line_f
 np	produce_nid_plots.py	/^import numpy as np$/;"	i
 of	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 of	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-of	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+of	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 oldfile	normalise_downloads.py	/^            oldfile = '{}\/{}'.format(DATADIR, filename)$/;"	v
 os	get_3gdxy_data.py	/^import os, sys, re, datetime$/;"	i
 os	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
 os	get_apple_mobility_data.py	/^import os$/;"	i
 os	normalise_downloads.py	/^import os, sys, re$/;"	i
 os	process_ncor_2019_data.py	/^import os$/;"	i
-os	produce_ncor_plots.py	/^import os$/;"	i
 own	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 own	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-own	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+own	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 pd	produce_nid_plots.py	/^import pandas as pd$/;"	i
 plt	get_apple_mobility_data.py	/^import matplotlib.pyplot as plt$/;"	i
 plt	produce_ncor_plots.py	/^import matplotlib.pyplot as plt$/;"	i
@@ -157,7 +153,6 @@ re	get_3gdxy_json.py	/^import os, json, re, sys$/;"	i
 re	get_immd_data.py	/^import re$/;"	i
 re	normalise_downloads.py	/^import os, sys, re$/;"	i
 re	process_ncor_2019_data.py	/^import re$/;"	i
-re	produce_ncor_plots.py	/^import re$/;"	i
 re	produce_nid_plots.py	/^import re$/;"	i
 read_3g_dxy_cn_json	process_ncor_2019_data.py	/^def read_3g_dxy_cn_json():$/;"	f
 read_china_places	process_ncor_2019_data.py	/^def read_china_places():$/;"	f
@@ -175,7 +170,7 @@ requests	get_immd_data.py	/^import requests$/;"	i
 results	get_immd_data.py	/^    results = main()$/;"	v
 routines	get_immd_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
 routines	process_ncor_2019_data.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
-routines	produce_ncor_plots.py	/^import db_helper as dbdo # This is a library of my own database routines - it just $/;"	i
+routines	produce_ncor_plots.py	/^import db_helper as dbdo    # This is a library of my own database routines$/;"	i
 run_all_scripts	run_everything.pl	/^sub run_all_scripts {$/;"	s
 safe_list_for_tablenames	process_ncor_2019_data.py	/^def safe_list_for_tablenames(given_list):$/;"	f
 sanitise_text	process_press_releases.pl	/^sub sanitise_text {$/;"	s

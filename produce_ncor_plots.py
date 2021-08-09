@@ -8,15 +8,16 @@ dave o'brien (c) 2020
 CC: BY-SA
 """
 import sys
-import os
-import re
+# import os
+# import re
 import sqlite3
-import json
+# import json
 import datetime
 import math
 sys.path.append('/home/odaiwai/src/dob_DBHelper')
-import db_helper as dbdo # This is a library of my own database routines - it just 
-                         # wraps sqlite commands into handier methods I like
+import db_helper as dbdo    # This is a library of my own database routines
+                            # - it just wraps sqlite commands into handier
+                            # methods I like to use.
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.dates as mdates # for date formatting
@@ -81,7 +82,7 @@ def list_of_countries_by_confirmed(final_date_str):
     country_count = {}
     for country in countries:
         country_count[country] = dbdo.value_from_query(dbc, 'SELECT max(confirmed) from [{}]'.format(country))
-    # Create a list of tuples sorted by index 1 i.e. value field     
+    # Create a list of tuples sorted by index 1 i.e. value field
     country_tuples = sorted(country_count.items() , reverse=True, key=lambda x: x[1])
     # Iterate over the sorted sequence
     countries_by_confirmed = []
@@ -90,7 +91,7 @@ def list_of_countries_by_confirmed(final_date_str):
     countries_by_confirmed.append('World')
     return countries_by_confirmed
 
-def keys_values_as_lists_from_dict(dict):    
+def keys_values_as_lists_from_dict(dict):
     keys = [key for key in dict.keys()]
     values = []
     keys.sort()
@@ -110,7 +111,7 @@ def graph_definitions():
     graphs.append(['Deaths', 1, 'Deaths', 'log', 2, 0, 1])
     graphs.append(['Deaths', 1, 'New Deaths', 'linear', 10, 7, 0])
     #graphs = {'Confirmed': 'limit', 'description'
-    
+
     return graphs
 
 def graph_definitions_as_dict():
@@ -122,10 +123,10 @@ def graph_definitions_as_dict():
             limit = 1
         else:
             limit = 10
-        
+
         for lag in [0, 7]:
             graph = {'uuid': graph_uuid,
-                     'column': column, 
+                     'column': column,
                      'limit': limit,
                      'lag': lag}
             if lag == 0:
@@ -149,7 +150,7 @@ def graph_definitions_as_dict():
 def list_of_populations_by_country(countries):
     populations = {}
     for country in countries:
-        country_alts = {'USA': 'United States', 
+        country_alts = {'USA': 'United States',
                         'Czechia': 'Czech Republic',
                         #'Ivory Coast': 'Côte%',
                         'Congo (Kinshasa)': 'Congo',
@@ -168,12 +169,12 @@ def list_of_populations_by_country(countries):
         pop_country = country
         if country in country_alts.keys():
             pop_country = country_alts[country]
-        population = dbdo.value_from_query(dbc, 
+        population = dbdo.value_from_query(dbc,
                                            ('SELECT population from [wiki_populations] '
                                             'where country like \'{}\''.format(pop_country)))
         if population == 'Null':
             print('{} No Population!'.format(country))
-            exit()
+            population = 1
         populations[country] = population
     return populations
 
@@ -207,10 +208,10 @@ def make_days_since_start_plot():
 
     countries = list_of_countries_by_confirmed(final_date_str)
     countries.remove('World')
-    countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 
-                             'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 
-                             'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia', 
-                             'Malaysia', 'Macau', 'World', 'Philippines', 'Turkey', 'Iran', 
+    countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy',
+                             'South Korea', 'USA', 'Germany', 'United Kingdom', 'Ireland', 'France',
+                             'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 'Thailand', 'Australia',
+                             'Malaysia', 'Macau', 'World', 'Philippines', 'Turkey', 'Iran',
                              'Switzerland', 'Brazil', 'Russia', 'India']
 
     # Setup the parameters for each graph
@@ -220,7 +221,7 @@ def make_days_since_start_plot():
         for graph in graph_definitions_as_dict():
             graph['by_pop'] = by_pop
             graphs.append(graph)
-    
+
     print(graphs)
 
     ANNOTATE_ALL = False
@@ -243,7 +244,7 @@ def make_days_since_start_plot():
 
         title += 'since no. {}'.format(graph['limit'])
         ax.set(title=title)
-        ax.set(xlabel='Days since {} {}'.format(graph['limit'], graph['column']), 
+        ax.set(xlabel='Days since {} {}'.format(graph['limit'], graph['column']),
                xlim = axis_range, ylabel=graph['description'])
         fig.autofmt_xdate()
         # configure the Y-Axis
@@ -267,7 +268,7 @@ def make_days_since_start_plot():
             results = dbdo.dict_from_query(dbc, cmd)
             days, cases = keys_values_as_lists_from_dict(results)
             #print(country, population, 'before', days, cases)
-            
+
             if graph['by_pop'] is True:
                 # Divide the cases by the population/divisor
                 adjusted_cases = []
@@ -288,16 +289,16 @@ def make_days_since_start_plot():
 
                 if country in countries_of_interest or ANNOTATE_ALL:
                     ax.plot(days, cases, lw = 2.5, zorder = zord)
-                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, 
+                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6,
                             zorder = zord)
                     # Add a label
-                    ax.annotate('{}: {:,.0f}'.format(country, cases[-1]), 
-                                (days[-1]+1, cases[-1]), fontsize = 8, ha='left', 
+                    ax.annotate('{}: {:,.0f}'.format(country, cases[-1]),
+                                (days[-1]+1, cases[-1]), fontsize = 8, ha='left',
                                 bbox = box, zorder = zord)
                 else:
                     #ax.plot(days, cases, color = '#80808080', lw = 1, zorder = zord)
                     ax.plot(days, cases, lw = 1, zorder = zord)
-                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3, 
+                    ax.plot([days[-1]], [cases[-1]], marker='o', markersize=3,
                             color = '#80808080', zorder = zord)
 
         if graph['doubling']:
@@ -313,7 +314,7 @@ def make_days_since_start_plot():
                     if double[-1] >= axis_limit:
                         break
                 ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
-                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]), 
+                ax.annotate('doubles in {} days'.format(ddays), (days[-1]+1, double[-1]),
                             fontsize = 8, ha='left', bbox = box, zorder = 2)
 
         ax.set(ylim = (graph['limit'], max_cases))
@@ -326,7 +327,7 @@ def make_days_since_start_plot():
 
         if graph['lag'] > 0:
             savefile += '_new'
-        
+
         savefile +='_since_start.png'
         print(savefile)
         fig.savefig(savefile, format = 'png')
@@ -336,14 +337,14 @@ def make_days_since_start_plot():
     return None
 
 def make_world_gridplots_from_jhu():
-    """ 
+    """
     Make a grid plot (nxn) of the top countries by number of cases
     Each graph should be the rolling average of new confirmed cases over the last N days
     """
     start_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC  limit 1')
     final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     max_cases = dbdo.value_from_query(dbc, 'SELECT confirmed from [world] order by Date DESC limit 1')
-    axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'), 
+    axis_range = [datetime.datetime.strptime(start_date_str + ' 00:00', '%Y-%m-%d %H:%M'),
                   datetime.datetime.strptime(final_date_str + ' 17:00', '%Y-%m-%d %H:%M')]
     countries = list_of_countries_by_confirmed(final_date_str)
     plt.style.use('seaborn-paper')
@@ -353,7 +354,7 @@ def make_world_gridplots_from_jhu():
     num_graphy = 6 # Number of graphs in a row
     FIGSIZE = [num_graphx * 1.5, num_graphy * 1.5]
     DAYS = True
-        
+
     for graph in graphs:
         fig, axes  = plt.subplots(num_graphx, num_graphy, figsize=FIGSIZE)
         fig.suptitle('SARS-CoV2 /COVID-19 in order of total confirmed cases')
@@ -372,7 +373,7 @@ def make_world_gridplots_from_jhu():
                 #print(cmd)
                 results = dbdo.dict_from_query(dbc, cmd)
                 days, cases = keys_values_as_lists_from_dict(results)
-            
+
                 # Determine the colour
                 max_cases = max(cases)
                 colour = 'tab:red'
@@ -399,11 +400,11 @@ def make_world_gridplots_from_jhu():
         else:
             fig.savefig('plots/{G}_grid_since_start.png'.format(G=graph['column']), format = 'png')
         plt.close()
-    
+
     return None
 
 def make_country_plots_from_jhu():
-    """ 
+    """
     Make a plot by Country:
     """
     plt.style.use('seaborn-paper')
@@ -411,7 +412,7 @@ def make_country_plots_from_jhu():
     box = dict(boxstyle = 'square', fc='#ffffff40')
     attrib_str = r'plot produced by @odaiwai using MatPlotLib, Python and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/'
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
-    
+
     final_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date DESC limit 1')
     countries = list_of_countries_by_confirmed(final_date_str)
     for country in countries:
@@ -427,7 +428,7 @@ def make_country_plots_from_jhu():
         print (country, final_date_str, conf[-1], cure[-1], sick[-1], dead[-1], cfr[-1])
         for index in range(0,len(d1d)):
             if type(d1d[index]) == None:
-                d1d[index] = 0 
+                d1d[index] = 0
         # Get datetime objects for the dates and the axis_range
         dates = []
         for date in date_strs:
@@ -440,51 +441,51 @@ def make_country_plots_from_jhu():
         fig = plt.figure(figsize=FIGSIZE)
         ax = plt.axes([0.1, 0.175, 0.80, 0.725])
         fig.suptitle('SARS2-CoV / COVID 19 for {}'.format(country))
-        
+
         # Primary Axis for C/S/D
         ax.set(title = '{:,.0f} Confirmed Cases (JHU CSSE Data)'.format(conf[-1]),
                xlabel='Date', xlim = axis_range, ylabel='Reported Cases')
         ax.format_data = mdates.DateFormatter('%Y-%m-%d')
         fig.autofmt_xdate()
-        ax.stackplot(dates, cure, sick, dead, 
-                     labels=['Recovered', 'Sick', 'Deaths', 'Active'], 
+        ax.stackplot(dates, cure, sick, dead,
+                     labels=['Recovered', 'Sick', 'Deaths', 'Active'],
                      colors=['green', 'orange', 'black', 'blue'])
         ax.legend(loc='upper left')
-        
+
         # Annotate the final numbers
         labelx = dates[len(dates)-2]
         ax.annotate('Recovered {:,.0f}'.format(cure[-1]), (labelx, cure[-1]/2), fontsize = 8, ha='right', bbox = box)
         ax.annotate('Sick {:,.0f}'.format(sick[-1]), (labelx, cure[-1] + conf[-1]/2 - dead[-1]), fontsize = 8, ha='right', bbox = box)
         ax.annotate('deaths {:,.0f}'.format(dead[-1]), (labelx, conf[-1] - dead[-1]/2), fontsize = 8, ha='right', bbox = box)
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-        
+
         # Secondary Axis for CFR
         ax2 = ax.twinx()
         ax2.plot(dates, cfr, label='Case Fatality Rate', color='red')
         ax2.annotate('CFR {:,.1f}%'.format(cfr[-1]*100), (labelx, cfr[-1]), fontsize = 8, ha='left', bbox = box)
-        
+
         # Death Rates in aggregate only
         if country == 'World':
             ax2.plot(dates, c7d, label='Weekly Growth Rate', linestyle = 'dashed')
             ax2.annotate('C7D {:,.1f}%'.format(c7d[-1]*100), (labelx, c7d[-1]), fontsize = 8, ha='left', bbox = box)
             ax2.plot(dates, d7d, label='Weekly Growth Rate (Deaths)', linestyle = 'dashed')
             ax2.annotate('D7D {:,.1f}%'.format(d7d[-1]*100), (labelx, d7d[-1]), fontsize = 8, ha='left', bbox = box)
-        
+
         ax2.set(ylim=(0.0,0.25), ylabel='Percentage')
         ax2.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax = 1, decimals = 1, symbol='%'))
         ax2.legend(loc='lower left')
-        
+
         # Attribution and save
         fig.text(0.5, 0.025, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
         fig.savefig('plots/{}.png'.format(country), format = 'png')
-        
+
         plt.close('all')
     return 0
 
 def make_days_since_start_plot_by_country():
     #Make the rate of increase since N cases plot
     # with all the countries
-        
+
     # Style and Attributions text
     box = dict(boxstyle = 'round', fc='#ffffffff')
     attrib_str = ('plot inspired by the work of https://twitter.com/jburnmurdoch/\n'
@@ -492,7 +493,7 @@ def make_days_since_start_plot_by_country():
                   'and SQLITE3. Data from JHU CSSE. https://www.diaspoir.net/')
     attrib_box = dict(boxstyle = 'square', fc='#ffffff80', pad = 0.25)
     plt.style.use('seaborn-paper')
-    
+
     # General Parameters
     max_cases = dbdo.value_from_query(dbc,'SELECT confirmed from [world] order by Date DESC limit 1')
     start_date_str = dbdo.value_from_query(dbc, 'SELECT Date from [jhu_data] order by Date ASC limit 1')
@@ -504,19 +505,19 @@ def make_days_since_start_plot_by_country():
     #axis_range = [start_date, final_date]
     countries = list_of_countries_by_confirmed(final_date_str)
     countries_of_interest = ['Hong Kong', 'Singapore', 'China', 'Italy', 'South Korea',
-                             'USA', 'Germany', 'United Kingdom', 'Ireland', 'France', 
-                             'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam', 
-                             'Thailand', 'Australia', 'Malaysia', 'Macau', 'World', 
+                             'USA', 'Germany', 'United Kingdom', 'Ireland', 'France',
+                             'Poland', 'Japan', 'Spain', 'Taiwan', 'Vietnam',
+                             'Thailand', 'Australia', 'Malaysia', 'Macau', 'World',
                              'Philippines', 'Turkey', 'Iran', 'Switzerland']
-    
+
     # Setup the parameters for each graph
     FACTOR = 0.00001
     #
 
     graphs = graph_definitions_as_dict()
-    colours = {'Confirmed': 'orange', 'Deaths': 'black', 
+    colours = {'Confirmed': 'orange', 'Deaths': 'black',
                'Recovered': 'green', 'Active': 'blue'}
-    
+
     for country in countries:
         print(country, start_date_str, '->', final_date_str)
         fig = plt.figure(figsize=FIGSIZE)
@@ -547,7 +548,7 @@ def make_days_since_start_plot_by_country():
                        '{G} from [{C}] where Confirmed >= 10 order by Date'
                        .format(C = country, G=graph['column'], L = graph['limit']))
             results = dbdo.rows_from_query(dbc, cmd) # 3 x n
-            
+
             if len(results) > 0:
                 dates = []
                 days = []
@@ -556,7 +557,7 @@ def make_days_since_start_plot_by_country():
                     dates.append(result[0])
                     days.append(result[1])
                     cases.append(result[2])
-        
+
                 #print (graph, results)
                 #print (graph, '\n\t', dates, '\n\t', days, '\n\t', cases)
                 # Add a marker and optionly an annotation for the last point
@@ -565,19 +566,19 @@ def make_days_since_start_plot_by_country():
                 if graph['lag'] > 0:
                     label = '{} new cases per day (over {} day) since no. {} ({})'.format(graph['column'], graph['lag'], graph['limit'], dates[0])
                     style = 'dashed'
-                        
+
                 final_note = '{:,.0f}'.format(cases[-1])
                 if graph['lag'] > 0:
                     final_note = '{:,.0f} per day'.format(cases[-1])
                 max_cases = max(max_cases, cases[-1])
-                ax.plot(days[graph['lag']:], cases[graph['lag']:], lw=2.5, 
+                ax.plot(days[graph['lag']:], cases[graph['lag']:], lw=2.5,
                         zorder=zord, color=col, linestyle=style, label=label)
-                ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6, 
+                ax.plot([days[-1]], [cases[-1]], marker='o', markersize=6,
                         zorder=zord)
                 # Add a label
-                ax.annotate(final_note, (days[-1], cases[-1]), 
+                ax.annotate(final_note, (days[-1], cases[-1]),
                             fontsize=8, ha='left', bbox=box, zorder=zord)
-       
+
         if graph['doubling']:
             # add dashed lines for 'doubles every (1..7) days
             ax.set(ylim=(1, max_cases))
@@ -592,17 +593,17 @@ def make_days_since_start_plot_by_country():
                     if double[-1] >= axis_limit:
                         break
                 ax.plot(days, double, linestyle = 'dashed', linewidth = 0.5, zorder = 2)
-                ax.annotate('doubles in {} days'.format(ddays), 
-                            (days[-1]+1, double[-1]), 
+                ax.annotate('doubles in {} days'.format(ddays),
+                            (days[-1]+1, double[-1]),
                             fontsize = 8, ha='left', bbox = box, zorder = 2)
-        
+
         # Attribution on the canvas
         ax.legend()
         fig.text(0.5, 0.025, attrib_str, ha = 'center', fontsize = 8, bbox = attrib_box, transform=plt.gcf().transFigure)
         # save it out
         fig.savefig('plots/{C}_since_start.png'.format(C=country), format = 'png')
         plt.close()
-        
+
     return None
 
 def main():
@@ -615,7 +616,7 @@ def main():
     make_days_since_start_plot_by_country()
     make_country_plots_from_jhu()
     make_world_gridplots_from_jhu()
-    
+
     # TODO
     # Assign a Region to Countries, also a consistent colour, and flag emoji?
     return 0
@@ -627,12 +628,12 @@ if __name__ == '__main__':
     VERBOSE = 0
     PLOTS = 1
     MINCASES = 8
-    
+
     DATADIR = '01_download_data'
     for arg in sys.argv:
         if arg == 'VERBOSE':
             VERBOSE = 1
-    
+
     db_connect = sqlite3.connect('ncorv2019.sqlite')
     dbc = db_connect.cursor()
 
