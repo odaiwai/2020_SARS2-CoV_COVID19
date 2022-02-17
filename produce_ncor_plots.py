@@ -247,8 +247,11 @@ def make_days_since_start_plot():
         ax.set(xlabel='Days since {} {}'.format(graph['limit'], graph['column']),
                xlim = axis_range, ylabel=graph['description'])
         fig.autofmt_xdate()
-        # configure the Y-Axis
-        ax.set_yscale(graph['scale'], basey = graph['base'])
+        # configure the Y-Axis - can't specify a base for linear scales now
+        if graph['scale'] == 'log':
+            ax.set_yscale(graph['scale'], base=graph['base'])
+        else:
+            ax.set_yscale(graph['scale'])
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         #ax.set(ylim = (graph['limit'], max_cases))
         max_cases = 0
@@ -529,7 +532,7 @@ def make_days_since_start_plot_by_country():
         ax.set(xlabel='Days since reporting Started', xlim = axis_range, ylabel='Cases')
         fig.autofmt_xdate()
         # configure the Y-Axis
-        ax.set_yscale('log', basey = 2)
+        ax.set_yscale('log', base = 2) # basey deprecated
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         #max_cases = 0
         zord = 10 #
