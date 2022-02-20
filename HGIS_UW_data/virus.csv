@@ -13,7 +13,7 @@
 <style>
 body{
 color:#FFF;
-font-family: Arial;
+font-family: Arial, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
 }
 .wrapper{
 background:url(images/New_ui/login_bg.png) #1F1F1F no-repeat;
@@ -247,7 +247,7 @@ wanstate = 2;
 wansbstate = 0;
 wanauxstate = 2;
 
-var isSupport = function(_ptn){return ('mssid 2.4G 5G noupdate usbX2 switchctrl manual_stb pwrctrl WIFI_LOGO nandflash meoVoda movistarTriple app led_2g reboot_schedule ipv6 ipv6pt PARENTAL2 dnsfilter am_addons ntpd dnspriv dualwan pptpd openvpnd utf8_ssid printer modem webdav rrsut media appnet timemachine hdspindown diskutility nfsd dnssec email wrs_wbl ookla snmp tor HTTPS letsencrypt ssh vpnc repeater psta wl6 wifi_tog_btn user_low_rssi bcmfa usericon stainfo realip netool cfg_sync amas bcmwifi conndiag eula proxysta account_binding gameMode'.search(_ptn) == -1) ? false : true;}
+var isSupport = function(_ptn){return ('mssid 2.4G 5G noupdate usbX2 switchctrl manual_stb pwrctrl WIFI_LOGO nandflash meoVoda movistarTriple app led_2g reboot_schedule ipv6 ipv6pt PARENTAL2 dnsfilter am_addons ntpd dnspriv dualwan pptpd openvpnd utf8_ssid printer modem webdav rrsut media appnet fileflex timemachine hdspindown diskutility nfsd dnssec email wrs_wbl ookla snmp tor HTTPS letsencrypt ssh vpnc repeater psta wl6 optimize_xbox wifi_tog_btn user_low_rssi bcmfa usericon stainfo realip netool cfg_sync amas bcmwifi conndiag eula proxysta account_binding gameMode ftp_ssl dis11b'.search(_ptn) == -1) ? false : true;}
 var tmo_support = isSupport("tmo");
 var dsl_support = isSupport("dsl");
 var gobi_support = isSupport("gobi");
@@ -258,7 +258,7 @@ wans_flag = 0;
 var new_lan_ip = [{next_lanip: '192.168.1.3'}][0].next_lanip;
 var header_info = [{ "host": "router.asus.com", "current_page": "error_page.htm", "protocol": "http", "port": 80 }];
 var location_org = header_info[0].protocol + "://" + header_info[0].host + ":" + header_info[0].port;
-var odm_support = ('mssid 2.4G 5G noupdate usbX2 switchctrl manual_stb pwrctrl WIFI_LOGO nandflash meoVoda movistarTriple app led_2g reboot_schedule ipv6 ipv6pt PARENTAL2 dnsfilter am_addons ntpd dnspriv dualwan pptpd openvpnd utf8_ssid printer modem webdav rrsut media appnet timemachine hdspindown diskutility nfsd dnssec email wrs_wbl ookla snmp tor HTTPS letsencrypt ssh vpnc repeater psta wl6 wifi_tog_btn user_low_rssi bcmfa usericon stainfo realip netool cfg_sync amas bcmwifi conndiag eula proxysta account_binding gameMode'.indexOf('odm') != -1) ? true : false;
+var odm_support = ('mssid 2.4G 5G noupdate usbX2 switchctrl manual_stb pwrctrl WIFI_LOGO nandflash meoVoda movistarTriple app led_2g reboot_schedule ipv6 ipv6pt PARENTAL2 dnsfilter am_addons ntpd dnspriv dualwan pptpd openvpnd utf8_ssid printer modem webdav rrsut media appnet fileflex timemachine hdspindown diskutility nfsd dnssec email wrs_wbl ookla snmp tor HTTPS letsencrypt ssh vpnc repeater psta wl6 optimize_xbox wifi_tog_btn user_low_rssi bcmfa usericon stainfo realip netool cfg_sync amas bcmwifi conndiag eula proxysta account_binding gameMode ftp_ssl dis11b'.indexOf(' odm') != -1) ? true : false;
 function initial(){
 var is_logined = ["1"][0];
 var html_code = '';
