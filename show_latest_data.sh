@@ -7,4 +7,4 @@ echo "Show the latest JHU pull:"
 head -10 ./JHU_data/JHU_data.log
 
 echo "Check for merge conflicts:"
-cd JHU_data/2019-nCoV/; git status
+cd JHU_data/COVID-19/; git status
