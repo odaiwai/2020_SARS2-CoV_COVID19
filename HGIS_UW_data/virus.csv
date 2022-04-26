@@ -245,7 +245,7 @@ var wansbstate = -1;
 var wanauxstate = -1;
 wanstate = 2;
 wansbstate = 0;
-wanauxstate = 2;
+wanauxstate = 0;
 
 var isSupport = function(_ptn){return ('mssid 2.4G 5G noupdate usbX2 switchctrl manual_stb pwrctrl WIFI_LOGO nandflash meoVoda movistarTriple app led_2g reboot_schedule ipv6 ipv6pt PARENTAL2 dnsfilter am_addons ntpd dnspriv dualwan pptpd openvpnd utf8_ssid printer modem webdav rrsut media appnet fileflex timemachine hdspindown diskutility nfsd dnssec email wrs_wbl ookla snmp tor HTTPS letsencrypt ssh vpnc repeater psta wl6 optimize_xbox wifi_tog_btn user_low_rssi bcmfa usericon stainfo realip netool cfg_sync amas bcmwifi conndiag eula proxysta account_binding gameMode ftp_ssl dis11b'.search(_ptn) == -1) ? false : true;}
 var tmo_support = isSupport("tmo");
