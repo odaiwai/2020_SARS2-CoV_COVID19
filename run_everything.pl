@@ -32,11 +32,14 @@ if ( $verbose ) {
 
 # run all the getters
 if ( $getters) {
-	my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
-					get_press_releases.pl get_disease_outbreak_news.pl 
-					get_hgis_data.sh get_covid_buildings_list.py 
-					get_immd_data.py get_local_situation.py/;
-	
+# my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
+# 					get_press_releases.pl get_disease_outbreak_news.pl 
+# 					get_hgis_data.sh get_covid_buildings_list.py 
+# 					get_immd_data.py get_local_situation.py/;
+#
+    my @getters = qw/get_WHO_data.py get_disease_outbreak_news.pl 
+					get_hgis_data.sh get_immd_data.py get_local_situation.py/;
+
 	run_all_scripts(@getters);
 	# Process the plots
 	my $result = `./process_ncor_2019_data.py $options >>$logfile 2>>$logfile`;
