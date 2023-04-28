@@ -50,6 +50,8 @@ The WHO is usually behind the times. Trailing indicator.
 
  - Added separate routines to download and process the data and to produce the
    graphs.
+ - The JHU repository is no longer updated, I could switch to the WHO data, but
+   it doesn't seem urgent.
 
 Yes, I know my Python isn't perfect - this is a work in progress, and I'm
 learning every day.
