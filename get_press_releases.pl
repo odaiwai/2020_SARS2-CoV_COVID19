@@ -16,7 +16,7 @@ my $verbose = 0;
 my $datadir = "01_download_data";
 my $no_clobber = 1;
 my $baseurl = "https://www.info.gov.hk/gia/general/";
-my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics|COVID";
+my $keywords = "Wuhan|SARS|MERS|pneumonia|hospital|statistics|COVID|CHP investigates";
 my @yearmonth_days;
 
 while (my $arg = shift) {
@@ -25,7 +25,7 @@ while (my $arg = shift) {
 	}
 	if ( $arg =~ /all/ ) {
 		$no_clobber = 0;
-		my $year = 2020;
+		my $year = 2022;
 		for my $month (1..12) {
 			for my $day (1..31) {
 				my $yearmonth_day = sprintf("%04d", $year) . sprintf("%02d", $month) ."/". sprintf("%02d", $day);
