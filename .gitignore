@@ -27,3 +27,6 @@ chn_admbnda_adm2_ocha
 ._*.py
 modules/
 tags
+._*
+*>pdf
+*.pdf
