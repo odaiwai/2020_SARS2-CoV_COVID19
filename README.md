@@ -52,9 +52,6 @@ The WHO is usually behind the times. Trailing indicator.
 ### 2023/04/23 - Hibernation
  - The JHU repository is no longer updated, I could switch to the WHO data, but
    it doesn't seem urgent.
-
-Yes, I know my Python isn't perfect - this is a work in progress, and I'm
-learning every day. This was my introduction to Python 3 
-
-
-
+### 2023/08/26 - Using WHO Data
+   - Switched to downloading the WHO data, only to find that that's not being
+   updated anymore either - stopped on 2023/08/23
