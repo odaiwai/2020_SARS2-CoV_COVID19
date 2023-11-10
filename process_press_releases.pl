@@ -5,7 +5,7 @@
 #        USAGE: ./process_nid_data.pl
 #  DESCRIPTION: Script to  parse the historic Press Releases and build a
 #  Database
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/06/2020 01:52:27 PM
 #===============================================================================
 use strict;

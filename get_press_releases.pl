@@ -1,10 +1,10 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: get_press_releases.pl
-#        USAGE: ./get_press_releases.pl  
-#  DESCRIPTION: Get Press Releases from info.gov.hk 
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#        USAGE: ./get_press_releases.pl
+#  DESCRIPTION: Get Press Releases from info.gov.hk
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/05/2020 07:03:13 PM
 #===============================================================================
 use strict;
@@ -54,7 +54,7 @@ my $wget_options = join(" ", @wget_options);
 
 for my $yearmonth_day (@yearmonth_days) {
 	my $pressrelease_url = "$baseurl/$yearmonth_day.htm";
-	open (my $fh, "-|", "lynx -dump $pressrelease_url"); 
+	open (my $fh, "-|", "lynx -dump $pressrelease_url");
 	my %links;
 	while (my $line = <$fh>) {
 		chomp $line;
@@ -70,7 +70,7 @@ for my $yearmonth_day (@yearmonth_days) {
 			my $link_url = $2;
 			if ( exists($links{$link_num}) ) {
 				print "Downloading $link_num \"$links{$link_num}\" from $link_url\n" if $verbose;
-				my $result = `cd $datadir; wget $wget_options $link_url`; 
+				my $result = `cd $datadir; wget $wget_options $link_url`;
 			}
 		}
 	}

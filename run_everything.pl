@@ -1,11 +1,11 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: run_everything.pl
-#        USAGE: ./run_everything.pl  
+#        USAGE: ./run_everything.pl
 #  DESCRIPTION: Script to run all of the get_* script and all of the parse_*
-#  scripts. 
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#  scripts.
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/28/2020 01:27:52 PM
 #===============================================================================
 use strict;
@@ -32,12 +32,12 @@ if ( $verbose ) {
 
 # run all the getters
 if ( $getters) {
-# my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh 
-# 					get_press_releases.pl get_disease_outbreak_news.pl 
-# 					get_hgis_data.sh get_covid_buildings_list.py 
+# my @getters = qw/get_3gdxy_data.py get_3gdxy_json.py get_jhu_data.sh
+# 					get_press_releases.pl get_disease_outbreak_news.pl
+# 					get_hgis_data.sh get_covid_buildings_list.py
 # 					get_immd_data.py get_local_situation.py/;
 #
-    my @getters = qw/get_WHO_data.py get_disease_outbreak_news.pl 
+    my @getters = qw/get_WHO_data.py get_disease_outbreak_news.pl
 					get_hgis_data.sh get_immd_data.py get_local_situation.py/;
 
 	run_all_scripts(@getters);
@@ -65,7 +65,7 @@ if ( $getters) {
 
 #run_all_scripts(@parsers);
 
-my @plots = qw/World China Italy USA Iran Italy France Germany Taiwan Spain 
+my @plots = qw/World China Italy USA Iran Italy France Germany Taiwan Spain
 				Singapore Macau Vietnam Ireland Poland
 				Switzerland Netherlands/;
 push @plots, "Hong Kong";
@@ -75,7 +75,7 @@ push @plots, "Confirmed";
 push @plots, "Recovered";
 push @plots, "Deaths";
 
-my @variants = qw/.png _since_start.png _new_since_start.png 
+my @variants = qw/.png _since_start.png _new_since_start.png
 				  _per_million_since_start.png _per_million_new_since_start.png/;
 
 for my $plot (@plots) {
@@ -109,4 +109,3 @@ sub run_all_scripts {
 
 	return $results;
 }
-

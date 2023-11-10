@@ -1,10 +1,10 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: get_historic.pl
-#        USAGE: ./get_historic.pl  
+#        USAGE: ./get_historic.pl
 #  DESCRIPTION: Script to download the historic NID data
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/05/2020 06:36:40 PM
 #===============================================================================
 use strict;
@@ -26,4 +26,3 @@ while (my $line = <$fh>) {
 		my $result = `wget --directory-prefix $datadir -nc $csv`;
 	}
 }
-

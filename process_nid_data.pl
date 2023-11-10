@@ -1,11 +1,11 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: process_nid_data.pl
-#        USAGE: ./process_nid_data.pl  
+#        USAGE: ./process_nid_data.pl
 #  DESCRIPTION: Script to  parse the historic NID files and build the historic
 #  Database
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/06/2020 01:52:27 PM
 #===============================================================================
 use strict;
@@ -27,7 +27,7 @@ $SIG{__WARN__} = sub {
 	} else {
 		warn @_;
 	}
-};	
+};
 
 my $verbose = 1;
 my $dbverb = 0;
@@ -122,7 +122,7 @@ sub sanitised_line {
 	$line =~ s/'//g;
 	$line =~ s/\s+$//g;
 	$line =~ s/^\s+//g;
-	
+
 	#print "Sanitising: $line\n";
 	if ( $line =~ /^\"(Influenza A\(H5\).+)\"/) {
 		$line =~ s/\".*\"/Influenza A\(H5; H7; H9\)/g;
@@ -130,7 +130,7 @@ sub sanitised_line {
 	if ( $line =~ /^\"(Influenza A\(H2\).+)\"/) {
 		$line =~ s/\".*\"/Influenza A\(H2; H5; H7; H9\)/g;
 	}
-	#print "Sanitising: $line\n";	
+	#print "Sanitising: $line\n";
 	#Trailing commas
 	$line =~ s/,+$//g;
 	$line =~ s/\s+,/,/g;
@@ -149,4 +149,3 @@ sub hex_from_string {
 	}
 	return $hex_string;
 }
-

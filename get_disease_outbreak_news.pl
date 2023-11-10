@@ -1,11 +1,11 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: get_disease_outbreak_news.pl
-#        USAGE: ./get_disease_outbreak_news.pl  
+#        USAGE: ./get_disease_outbreak_news.pl
 #  DESCRIPTION: Get the Diease Outbreak News from the WHO - more reliable than
 #  China/HK govt?
-#       AUTHOR: Dave OBrien (odaiwai), odaiwai@diaspoir.net
+#       AUTHOR: Dave OBrien (odaiwai), [REDACTED]
 #      CREATED: 01/20/2020 12:45:25 PM
 #===============================================================================
 use strict;
@@ -50,4 +50,3 @@ sub sanitise_url {
 	$url =~ s/\?/\\\?/g;
 	return $url;
 }
-
